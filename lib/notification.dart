@@ -22,7 +22,6 @@ class _NotificationScreenState extends State<NotificationScreen> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-  bool _builtInFishermanNotifShown = false;
 
   String _formatTimestamp(Timestamp timestamp) {
     final now = DateTime.now();
@@ -40,70 +39,36 @@ class _NotificationScreenState extends State<NotificationScreen> {
       return 'Just now';
     }
   }
+  Future<void> _addFishermanNotificationIfNeeded() async {
+  // Only trigger for fisherman userType
+  if (widget.userType == 'fisherman') {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
 
+    // Query if notification already exists to avoid duplicates
+    final existing = await FirebaseFirestore.instance
+        .collection('notifications')
+        .where('userId', isEqualTo: user.uid)
+        .where('type', isEqualTo: 'product_ordered_builtin')
+        .get();
+
+    if (existing.docs.isEmpty) {
+      await FirebaseFirestore.instance.collection('notifications').add({
+        'userId': user.uid,
+        'type': 'product_ordered_builtin',
+        'message': 'Your product has been Ordered',
+        'createdAt': FieldValue.serverTimestamp(),
+        'isRead': false,
+      });
+    }
+  }
+}
   String _formatNotificationMessage(String originalMessage) {
     if (originalMessage.contains('Your Order #') &&
         originalMessage.contains('has been placed successfully!')) {
       return 'Your Order has been placed successfully';
     }
-    if (originalMessage.contains('Your order has been placed successfully!')) {
-      return 'Your Order has been placed successfully';
-    }
-    if (originalMessage.contains('New order #') &&
-        originalMessage.contains('received for')) {
-      return 'You received a new order';
-    }
-    if (originalMessage == 'Your product has been ordered!') {
-      return 'Your product has been ordered!';
-    }
-    if (originalMessage.contains('has been confirmed by the seller')) {
-      return 'Order confirmed by seller';
-    }
-    if (originalMessage.contains('has been shipped')) {
-      return 'Order shipped';
-    }
-    if (originalMessage.contains('has been delivered')) {
-      return 'Order delivered';
-    }
-    if (originalMessage.contains('has been cancelled')) {
-      return 'Order cancelled';
-    }
     return originalMessage;
-  }
-
-  Future<void> _markAsRead(String notificationId) async {
-    try {
-      await _firestore.collection('notifications').doc(notificationId).update({
-        'isRead': true,
-      });
-    } catch (e) {
-      debugPrint('Error marking notification as read: $e');
-    }
-  }
-
-  // Built-in notification for fisherman
-  Future<void> _addBuiltInFishermanNotification(User user) async {
-    // Only insert if not already done in this session
-    if (_builtInFishermanNotifShown) return;
-    _builtInFishermanNotifShown = true;
-
-    // Check if this notification already exists (avoid duplicates)
-    final snapshot = await _firestore
-        .collection('notifications')
-        .where('userId', isEqualTo: user.uid)
-        .where('type', isEqualTo: 'builtin_product_order')
-        .limit(1)
-        .get();
-
-    if (snapshot.docs.isEmpty) {
-      await _firestore.collection('notifications').add({
-        'userId': user.uid,
-        'type': 'builtin_product_order',
-        'message': 'Your product has been ordered!',
-        'isRead': false,
-        'createdAt': FieldValue.serverTimestamp(),
-      });
-    }
   }
 
   Future<void> _signOut() async {
@@ -196,12 +161,6 @@ class _NotificationScreenState extends State<NotificationScreen> {
     final user = _auth.currentUser;
     if (user == null) return _buildUnauthenticatedView(context);
 
-    // Built-in notification for fisherman type users
-    if (widget.userType.toLowerCase() == 'fisherman' ||
-        widget.userType.toLowerCase().contains('fisherman')) {
-      _addBuiltInFishermanNotification(user);
-    }
-
     return Scaffold(
       key: _scaffoldKey,
       drawer: _buildDrawer(),
@@ -248,9 +207,49 @@ class _NotificationScreenState extends State<NotificationScreen> {
                         builder: (context) =>
                             AddToCart(userType: widget.userType))),
               ),
-              IconButton(
-                icon: const Icon(Icons.notifications_none, color: Colors.black),
-                onPressed: () {},
+              StreamBuilder<QuerySnapshot>(
+                stream: _firestore
+                    .collection('notifications')
+                    .where('userId', isEqualTo: user.uid)
+                    .where('isRead', isEqualTo: false)
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  int notificationCount = snapshot.data?.docs.length ?? 0;
+                  return Stack(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.notifications_none,
+                            color: Colors.black),
+                        onPressed: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  NotificationScreen(userType: widget.userType),
+                            )),
+                      ),
+                      if (notificationCount > 0)
+                        Positioned(
+                          right: 8,
+                          top: 8,
+                          child: Container(
+                            padding: const EdgeInsets.all(2),
+                            decoration: BoxDecoration(
+                              color: Colors.red,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            constraints: const BoxConstraints(
+                                minWidth: 16, minHeight: 16),
+                            child: Text(
+                              '$notificationCount',
+                              style: const TextStyle(
+                                  color: Colors.white, fontSize: 10),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ),
+                    ],
+                  );
+                },
               ),
               IconButton(
                 icon: const Icon(Icons.person_outline, color: Colors.black),
@@ -270,98 +269,619 @@ class _NotificationScreenState extends State<NotificationScreen> {
             .where('userId', isEqualTo: user.uid)
             .snapshots(),
         builder: (context, snapshot) {
-          if (snapshot.hasError)
+          if (snapshot.hasError) {
             return Center(child: Text('Error: ${snapshot.error}'));
-          if (!snapshot.hasData)
+          }
+          if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
+          }
           final notifications = snapshot.data!.docs;
-          if (notifications.isEmpty)
-            return const Center(child: Text('No notifications.'));
+          return StreamBuilder<QuerySnapshot>(
+            stream: _firestore
+                .collection('accept_cancel_notifications')
+                .where('userId', isEqualTo: user.uid)
+                .snapshots(),
+            builder: (context, acceptCancelSnapshot) {
+              List<QueryDocumentSnapshot> allNotifications =
+                  List.from(notifications);
+              if (acceptCancelSnapshot.hasData) {
+                allNotifications.addAll(acceptCancelSnapshot.data!.docs);
+              }
+              allNotifications.sort((a, b) {
+                final aCreated = a['createdAt'] as Timestamp?;
+                final bCreated = b['createdAt'] as Timestamp?;
+                if (aCreated == null && bCreated == null) return 0;
+                if (aCreated == null) return 1;
+                if (bCreated == null) return -1;
+                return bCreated.compareTo(aCreated);
+              });
 
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: notifications.length,
-            itemBuilder: (context, index) {
-              final doc = notifications[index];
-              final data = doc.data() as Map<String, dynamic>;
-              final message =
-                  _formatNotificationMessage(data['message'] ?? 'Notification');
-              final timestamp = data['createdAt'] as Timestamp?;
-              final timeText = timestamp != null
-                  ? _formatTimestamp(timestamp)
-                  : 'Recently';
-              final isRead = data['isRead'] ?? false;
-
-              return GestureDetector(
-                onTap: () {
-                  if (!isRead) {
-                    _markAsRead(doc.id);
-                  }
-                },
-                child: Container(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: isRead ? Colors.white : const Color(0xFFD4E8F6),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.grey.shade300),
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        margin: const EdgeInsets.only(right: 12),
-                        padding: const EdgeInsets.all(6),
+              return LayoutBuilder(
+                builder: (context, constraints) {
+                  final double maxWidth = constraints.maxWidth > 1200
+                      ? 800.0
+                      : constraints.maxWidth > 600
+                          ? 600.0
+                          : constraints.maxWidth * 0.9;
+                  return Center(
+                    child: ConstrainedBox(
+                      constraints:
+                          BoxConstraints(maxWidth: maxWidth, minWidth: 300),
+                      child: Container(
+                        margin: EdgeInsets.symmetric(
+                          horizontal: constraints.maxWidth > 600 ? 40 : 16,
+                          vertical: 20,
+                        ),
                         decoration: BoxDecoration(
-                          color: isRead ? Colors.grey : const Color(0xFF1A3D7C),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.notifications,
                           color: Colors.white,
-                          size: 16,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 10,
+                              spreadRadius: 2,
+                            ),
+                          ],
                         ),
-                      ),
-                      Expanded(
                         child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            Text(
-                              message,
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.black87,
-                                fontWeight:
-                                    isRead ? FontWeight.normal : FontWeight.bold,
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  vertical: 16, horizontal: 20),
+                              decoration: const BoxDecoration(
+                                color: Color(0xFF4F8AAE),
+                                borderRadius: BorderRadius.only(
+                                  topLeft: Radius.circular(12),
+                                  topRight: Radius.circular(12),
+                                ),
+                              ),
+                              child: const Text(
+                                'Notifications',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
                               ),
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              timeText,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey.shade600,
+                            Flexible(
+                              child: ListView.builder(
+                                padding: const EdgeInsets.all(16),
+                                itemCount: allNotifications.length,
+                                itemBuilder: (context, index) {
+                                  final doc = allNotifications[index];
+                                  final data =
+                                      doc.data() as Map<String, dynamic>;
+                                  final message = _formatNotificationMessage(
+                                      data['message'] ?? 'Notification');
+                                  final timestamp =
+                                      data['createdAt'] as Timestamp?;
+                                  final timeText = timestamp != null
+                                      ? _formatTimestamp(timestamp)
+                                      : 'Recently';
+
+                                  final type = data['type'] ?? '';
+                                  final orderId = data['orderId'];
+                                  final sellerId = data['sellerId'];
+                                  final userId = data['userId'];
+
+                                  return GestureDetector(
+                                    onTap: () async {
+                                      if ((type == 'order_placed' ||
+                                              type == 'new_order' ||
+                                              type == 'order_cancelled' ||
+                                              type == 'order_accepted' ||
+                                              type == 'order_ready') &&
+                                          orderId != null &&
+                                          orderId != "") {
+                                        if (type == 'new_order' &&
+                                            sellerId == user.uid) {
+                                          _showOrderActionDialog(context,
+                                              orderId, userId, sellerId);
+                                        } else if (
+                                            // For customer notifications, always show using buyerId (userId from notification)
+                                            (type == 'order_accepted' ||
+                                                type == 'order_cancelled' ||
+                                                type == 'order_ready')) {
+                                          _showOrderDetailsDialog(
+                                              context, orderId,
+                                              buyerId: userId);
+                                        } else if (type == 'order_accepted' &&
+                                            userId == user.uid &&
+                                            sellerId != user.uid) {
+                                          _showMarkReadyDialog(context, orderId,
+                                              userId, sellerId);
+                                        } else {
+                                          _showOrderDetailsDialog(
+                                              context, orderId);
+                                        }
+                                      }
+                                    },
+                                    child: Container(
+                                      width: double.infinity,
+                                      margin: const EdgeInsets.only(bottom: 12),
+                                      padding: const EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFD4E8F6),
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(
+                                            color: Colors.grey.shade300),
+                                      ),
+                                      child: Row(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Container(
+                                            margin: const EdgeInsets.only(
+                                                right: 12),
+                                            padding: const EdgeInsets.all(6),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFF1A3D7C),
+                                              shape: BoxShape.circle,
+                                            ),
+                                            child: const Icon(
+                                              Icons.notifications,
+                                              color: Colors.white,
+                                              size: 16,
+                                            ),
+                                          ),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  message,
+                                                  style: const TextStyle(
+                                                    fontSize: 14,
+                                                    color: Colors.black87,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 4),
+                                                Text(
+                                                  timeText,
+                                                  style: TextStyle(
+                                                    fontSize: 12,
+                                                    color: Colors.grey.shade600,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                },
                               ),
                             ),
                           ],
                         ),
                       ),
-                      if (!isRead)
-                        Container(
-                          width: 8,
-                          height: 8,
-                          decoration: const BoxDecoration(
-                            color: Colors.red,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
+                    ),
+                  );
+                },
               );
             },
           );
         },
+      ),
+    );
+  }
+
+  Future<void> _updateOrderStatus({
+    required String buyerId,
+    required String orderId,
+    required String newStatus,
+    required String sellerId,
+    required BuildContext context,
+  }) async {
+    try {
+      final orderDoc = await _firestore
+          .collection('users')
+          .doc(buyerId)
+          .collection('orders')
+          .doc(orderId)
+          .get();
+
+      if (!mounted) return;
+
+      if (!orderDoc.exists) {
+        final messenger = ScaffoldMessenger.of(context);
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Order not found.')),
+        );
+        return;
+      }
+
+      final orderData = orderDoc.data() ?? {};
+      if (orderData['sellerId'] != sellerId) {
+        final messenger = ScaffoldMessenger.of(context);
+        messenger.showSnackBar(
+          const SnackBar(
+              content: Text(
+                  'Permission denied: you are not the seller of this order.')),
+        );
+        return;
+      }
+
+      await _firestore
+          .collection('users')
+          .doc(buyerId)
+          .collection('orders')
+          .doc(orderId)
+          .update({'status': newStatus});
+
+      if (!mounted) return;
+    } catch (e) {
+      if (!mounted) return;
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.showSnackBar(
+        SnackBar(content: Text('Failed to update order: $e')),
+      );
+    }
+  }
+
+  void _showOrderActionDialog(BuildContext context, String orderId,
+      String? buyerId, String? sellerId) async {
+    if (buyerId == null || sellerId == null) return;
+    try {
+      final orderDoc = await _firestore
+          .collection('users')
+          .doc(sellerId)
+          .collection('seller_orders')
+          .doc(orderId)
+          .get();
+
+      if (!orderDoc.exists) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Order Details'),
+            content: const Text('Order details not found.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Close'),
+              ),
+            ],
+          ),
+        );
+        return;
+      }
+
+      final order = orderDoc.data() ?? {};
+
+      // Get the real buyer's user ID from the order document
+      final correctBuyerId = order['buyerId'] ?? order['userId'] ?? buyerId;
+
+      showDialog(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Order Details'),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (order['productImage'] != null &&
+                    order['productImage'].toString().isNotEmpty)
+                  Center(
+                    child: Image.network(order['productImage'],
+                        width: 120, height: 100, fit: BoxFit.cover),
+                  ),
+                const SizedBox(height: 10),
+                _orderDetailRow('Product Name', order['productName']),
+                _orderDetailRow('Price', '₱${order['productPrice']}'),
+                _orderDetailRow('Quantity', order['quantity']),
+                _orderDetailRow('Buyer',
+                    '${order['firstName'] ?? ''} ${order['lastName'] ?? ''}'),
+                _orderDetailRow('Address', order['address']),
+                _orderDetailRow('Municipality', order['municipality']),
+                _orderDetailRow('Province', order['province']),
+                _orderDetailRow('Order Status', order['status']),
+                _orderDetailRow(
+                    'Order Date',
+                    order['createdAt'] != null &&
+                            order['createdAt'] is Timestamp
+                        ? DateFormat('MMM d, y – hh:mm a')
+                            .format((order['createdAt'] as Timestamp).toDate())
+                        : ''),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Close'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final messenger = ScaffoldMessenger.of(context);
+                Navigator.pop(dialogContext);
+                await _updateOrderStatus(
+                  buyerId: correctBuyerId,
+                  orderId: orderId,
+                  newStatus: 'Accepted',
+                  sellerId: sellerId,
+                  context: context,
+                );
+                await _firestore
+                    .collection('users')
+                    .doc(sellerId)
+                    .collection('seller_orders')
+                    .doc(orderId)
+                    .update({'status': 'Accepted'});
+                await _firestore.collection('accept_cancel_notifications').add({
+                  'userId': correctBuyerId,
+                  'orderId': orderId,
+                  'type': 'order_accepted',
+                  'message':
+                      'Your order has been accepted and is ready to deliver.',
+                  'createdAt': FieldValue.serverTimestamp(),
+                });
+                if (!mounted) return;
+                messenger.showSnackBar(const SnackBar(
+                    content: Text('Order accepted and buyer notified.')));
+              },
+              child:
+                  const Text('Accept', style: TextStyle(color: Colors.white)),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final messenger = ScaffoldMessenger.of(context);
+                Navigator.pop(dialogContext);
+                await _updateOrderStatus(
+                  buyerId: correctBuyerId,
+                  orderId: orderId,
+                  newStatus: 'Cancelled',
+                  sellerId: sellerId,
+                  context: context,
+                );
+                await _firestore
+                    .collection('users')
+                    .doc(sellerId)
+                    .collection('seller_orders')
+                    .doc(orderId)
+                    .update({'status': 'Cancelled'});
+                await _firestore.collection('accept_cancel_notifications').add({
+                  'userId': correctBuyerId,
+                  'orderId': orderId,
+                  'type': 'order_cancelled',
+                  'message': 'Your order has been cancelled by the seller.',
+                  'createdAt': FieldValue.serverTimestamp(),
+                });
+                if (!mounted) return;
+                messenger.showSnackBar(const SnackBar(
+                    content: Text('Order cancelled and buyer notified.')));
+              },
+              child:
+                  const Text('Cancel', style: TextStyle(color: Colors.white)),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      debugPrint('Error fetching order: $e');
+    }
+  }
+
+  void _showMarkReadyDialog(BuildContext context, String orderId,
+      String? buyerId, String? sellerId) async {
+    if (buyerId == null || sellerId == null) return;
+    DocumentSnapshot? orderDoc;
+    try {
+      orderDoc = await _firestore
+          .collection('users')
+          .doc(buyerId)
+          .collection('orders')
+          .doc(orderId)
+          .get();
+    } catch (e) {
+      orderDoc = null;
+    }
+
+    if (orderDoc == null || !orderDoc.exists) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Order Details'),
+          content: const Text('Order details not found.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Close'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    final order = orderDoc.data() as Map<String, dynamic>? ?? {};
+    final productName = order['productName'] ?? '';
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Mark Order as Ready?'),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (order['productImage'] != null &&
+                  order['productImage'].toString().isNotEmpty)
+                Center(
+                  child: Image.network(order['productImage'],
+                      width: 120, height: 100, fit: BoxFit.cover),
+                ),
+              const SizedBox(height: 10),
+              _orderDetailRow('Product Name', order['productName']),
+              _orderDetailRow('Price', '₱${order['productPrice']}'),
+              _orderDetailRow('Quantity', order['quantity']),
+              _orderDetailRow('Seller', order['sellerName']),
+              _orderDetailRow('Seller Contact', order['sellerContact']),
+              _orderDetailRow('Customer',
+                  '${order['firstName'] ?? ''} ${order['lastName'] ?? ''}'),
+              _orderDetailRow('Address', order['address']),
+              _orderDetailRow('Municipality', order['municipality']),
+              _orderDetailRow('Province', order['province']),
+              _orderDetailRow('Order Status', order['status']),
+              _orderDetailRow(
+                  'Order Date',
+                  order['createdAt'] != null && order['createdAt'] is Timestamp
+                      ? DateFormat('MMM d, y – hh:mm a')
+                          .format((order['createdAt'] as Timestamp).toDate())
+                      : ''),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Close'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final messenger = ScaffoldMessenger.of(context);
+              Navigator.pop(dialogContext);
+              await _firestore
+                  .collection('users')
+                  .doc(buyerId)
+                  .collection('orders')
+                  .doc(orderId)
+                  .update({'status': 'Ready to Deliver'});
+              await _firestore
+                  .collection('users')
+                  .doc(sellerId)
+                  .collection('seller_orders')
+                  .doc(orderId)
+                  .update({'status': 'Ready to Deliver'});
+
+              await _firestore.collection('accept_cancel_notifications').add({
+                'userId': buyerId,
+                'orderId': orderId,
+                'type': 'order_ready',
+                'message': 'Your order for "$productName" is ready to deliver!',
+                'createdAt': FieldValue.serverTimestamp(),
+              });
+
+              if (!mounted) return;
+              messenger.showSnackBar(const SnackBar(
+                  content: Text('Order marked as ready and buyer notified.')));
+            },
+            child: const Text('Mark as Ready to Deliver'),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showOrderDetailsDialog(BuildContext context, String orderId,
+      {String? buyerId}) async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+
+    final theBuyerId = buyerId ?? user.uid;
+
+    DocumentSnapshot? orderDoc;
+    try {
+      orderDoc = await _firestore
+          .collection('users')
+          .doc(theBuyerId)
+          .collection('orders')
+          .doc(orderId)
+          .get();
+      if (!orderDoc.exists) {
+        orderDoc = await _firestore
+            .collection('users')
+            .doc(theBuyerId)
+            .collection('seller_orders')
+            .doc(orderId)
+            .get();
+      }
+    } catch (e) {
+      orderDoc = null;
+    }
+
+    if (orderDoc == null || !orderDoc.exists) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Order Details'),
+          content: const Text('Order details not found.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Close'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    final order = orderDoc.data() as Map<String, dynamic>? ?? {};
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Order Details'),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (order['productImage'] != null &&
+                  order['productImage'].toString().isNotEmpty)
+                Center(
+                  child: Image.network(order['productImage'],
+                      width: 120, height: 100, fit: BoxFit.cover),
+                ),
+              const SizedBox(height: 10),
+              _orderDetailRow('Product Name', order['productName']),
+              _orderDetailRow('Price', '₱${order['productPrice']}'),
+              _orderDetailRow('Quantity', order['quantity']),
+              _orderDetailRow('Seller', order['sellerName']),
+              _orderDetailRow('Seller Contact', order['sellerContact']),
+              _orderDetailRow('Customer',
+                  '${order['firstName'] ?? ''} ${order['lastName'] ?? ''}'),
+              _orderDetailRow('Address', order['address']),
+              _orderDetailRow('Municipality', order['municipality']),
+              _orderDetailRow('Province', order['province']),
+              _orderDetailRow('Order Status', order['status']),
+              _orderDetailRow(
+                  'Order Date',
+                  order['createdAt'] != null && order['createdAt'] is Timestamp
+                      ? DateFormat('MMM d, y – hh:mm a')
+                          .format((order['createdAt'] as Timestamp).toDate())
+                      : ''),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _orderDetailRow(String label, dynamic value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('$label: ', style: const TextStyle(fontWeight: FontWeight.bold)),
+          Expanded(child: Text(value?.toString() ?? '')),
+        ],
       ),
     );
   }
@@ -420,7 +940,14 @@ class _NotificationScreenState extends State<NotificationScreen> {
             ),
             IconButton(
               icon: const Icon(Icons.notifications_none, color: Colors.black),
-              onPressed: () {},
+              onPressed: () {
+                Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          NotificationScreen(userType: widget.userType),
+                    ));
+              },
             ),
             IconButton(
               icon: const Icon(Icons.person_outline, color: Colors.black),
