@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "666394819939",
+    "project_id": "fisher-tech",
+    "storage_bucket": "fisher-tech.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:666394819939:android:e1aad4e46bccfa54a0a756",
+        "android_client_info": {
+          "package_name": "com.example.fisher_tech"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAAGTe2VitjuUJS_PX02bojyoK9QiJUMC8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

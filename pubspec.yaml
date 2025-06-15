@@ -1,0 +1,64 @@
+name: fisher_tech
+description: "A new Flutter project."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.5.3
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  image_picker: ^1.1.0
+  path: ^1.9.0
+  http: ^1.4.0
+  webview_flutter: ^4.4.2
+  path_provider: ^2.1.1
+  cloudinary: ^1.2.0
+  firebase_core: ^2.27.1
+  sign_in_with_apple: ^7.0.1
+  firebase_auth: ^4.17.4
+  chewie: ^1.7.4
+  cloud_firestore: ^4.15.5
+  open_filex: ^4.3.3
+  intl: ^0.18.1
+  universal_html: ^2.2.1
+  universal_io: ^2.2.1
+  firebase_storage: ^11.7.4
+  flutter_cache_manager: ^3.3.1
+  webview_flutter_android: ^3.3.0
+  webview_flutter_wkwebview: ^3.3.0
+  webview_flutter_web: ^0.2.3
+  pdfx: ^2.6.0
+  flutter_pdfview: ^1.2.2
+  video_player: ^2.9.5
+  url_launcher: ^6.2.5 
+  file_picker: ^8.0.7
+  dio: ^5.3.2
+
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/logo.png
+    - assets/images/googleicon.png
+    - assets/images/pasayan.jpg
+    - assets/images/hasa_hasa.jpg
+    - assets/images/pusit.jpg
+    - assets/images/woman.png
+    - assets/images/charisa.png
+    - assets/images/cristin.png
+    - assets/images/rea.png
+    - assets/images/eman.png
+    - assets/images/rea.png
+    - assets/images/citycatbalogan.png
+    - assets/images/coastguard.png
+    - assets/images/map.png
+    - assets/images/firestation.png
