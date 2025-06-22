@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <base href="/">
+  <base href="/Fisher_Tech/">
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
@@ -34,6 +34,17 @@
   <script src="https://cdn.jsdelivr.net/npm/iframe-resizer@4.2.11/js/iframeResizer.min.js"></script>
 </head>
 <body>
+  <!-- Debug script -->
+  <script>
+    console.log('Fisher Tech App - Starting initialization...');
+    window.addEventListener('load', function() {
+      console.log('Fisher Tech App - Window loaded');
+    });
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('Fisher Tech App - DOM content loaded');
+    });
+  </script>
+
   <!-- PDF.js for document viewing -->
   <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@2.12.313/build/pdf.js" type="text/javascript"></script>
   <script type="text/javascript">
@@ -50,6 +61,7 @@
   <!-- Cloudinary initialization script -->
   <script type="text/javascript">
     document.addEventListener('DOMContentLoaded', function() {
+      console.log('Fisher Tech App - Initializing Cloudinary...');
       // Initialize Cloudinary
       const cloudinaryOptions = {
         cloudName: 'dvkzio03x',
@@ -62,6 +74,7 @@
       
       // Make available to Flutter
       window.cloudinaryOptions = cloudinaryOptions;
+      console.log('Fisher Tech App - Cloudinary initialized');
     });
   </script>
 </body>
