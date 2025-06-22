@@ -8,11 +8,11 @@ class VendorProfileScreen extends StatelessWidget {
   final String? profileImageUrl;
 
   const VendorProfileScreen({
-    Key? key,
+    super.key,
     required this.fishermanId,
     this.fishermanName,
     this.profileImageUrl,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

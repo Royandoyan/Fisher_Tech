@@ -23,6 +23,7 @@ import 'package:video_player/video_player.dart';
 import 'package:chewie/chewie.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:webview_flutter/webview_flutter.dart';
+import 'package:video_thumbnail/video_thumbnail.dart';
 // Import for Android
 import 'package:webview_flutter_android/webview_flutter_android.dart';
 // Import for iOS
@@ -60,12 +61,94 @@ class _HomePageState extends State<HomePage> {
   // For fisherman profile image cache
   final Map<String, String?> _fishermanProfileImageUrlCache = {};
 
+  // For video thumbnail cache
+  final Map<String, String?> _videoThumbnailCache = {};
+
+  // Generate video thumbnail
+  Future<String?> _generateVideoThumbnail(String videoUrl) async {
+    if (_videoThumbnailCache.containsKey(videoUrl)) {
+      return _videoThumbnailCache[videoUrl];
+    }
+
+    // Skip thumbnail generation on web platform
+    if (kIsWeb) {
+      _videoThumbnailCache[videoUrl] = null;
+      return null;
+    }
+
+    try {
+      final directory = await getTemporaryDirectory();
+      final thumbnailPath = '${directory.path}/thumbnail_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      
+      final thumbnail = await VideoThumbnail.thumbnailFile(
+        video: videoUrl,
+        thumbnailPath: thumbnailPath,
+        imageFormat: ImageFormat.JPEG,
+        quality: 75,
+        maxWidth: 200,
+        maxHeight: 200,
+        timeMs: 1000, // Take thumbnail at 1 second
+      );
+
+      if (thumbnail != null) {
+        _videoThumbnailCache[videoUrl] = thumbnail;
+        return thumbnail;
+      }
+    } catch (e) {
+      debugPrint('Error generating thumbnail: $e');
+    }
+
+    _videoThumbnailCache[videoUrl] = null;
+    return null;
+  }
+
 // Responsive grid count helper
   int _getGridColumnCount(double width) {
-    if (width < 600) return 1;
-    if (width < 900) return 2;
-    if (width < 1400) return 3;
-    return 4;
+    if (width < 480) return 1;
+    if (width < 768) return 2;
+    if (width < 1024) return 3;
+    if (width < 1400) return 4;
+    return 5;
+  }
+
+  // Responsive spacing helper
+  double _getResponsiveSpacing(double width) {
+    if (width < 480) return 8.0;
+    if (width < 768) return 12.0;
+    if (width < 1024) return 16.0;
+    return 20.0;
+  }
+
+  // Responsive font size helper
+  double _getResponsiveFontSize(double width, {double baseSize = 16.0}) {
+    if (width < 480) return baseSize - 2;
+    if (width < 768) return baseSize - 1;
+    if (width < 1024) return baseSize;
+    return baseSize + 1;
+  }
+
+  // Responsive container height helper
+  double _getResponsiveContainerHeight(double width) {
+    if (width < 480) return 140.0;
+    if (width < 768) return 150.0;
+    if (width < 1024) return 160.0;
+    return 170.0;
+  }
+
+  // Responsive icon size helper
+  double _getResponsiveIconSize(double width) {
+    if (width < 480) return 20.0;
+    if (width < 768) return 22.0;
+    if (width < 1024) return 24.0;
+    return 26.0;
+  }
+
+  // Responsive card width helper - designed to show exactly 3 items
+  double _getResponsiveCardWidth(double width) {
+    // Calculate width to show exactly 3 items with spacing
+    final availableWidth = width - 48; // Account for padding and margins
+    final itemWidth = (availableWidth - 16) / 3; // 3 items with 8px spacing between each
+    return itemWidth.clamp(80.0, 120.0); // Minimum 80px, maximum 120px for better visibility
   }
 
   @override
@@ -480,10 +563,150 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _signOut() async {
+    // Show confirmation dialog
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final fontSize = _getResponsiveFontSize(screenWidth, baseSize: 16.0);
+    final buttonFontSize = _getResponsiveFontSize(screenWidth, baseSize: 14.0);
+    final dialogWidth = (screenWidth < 480 ? screenWidth * 0.75 : screenWidth < 768 ? 320.0 : 380.0);
+    
+    final shouldLogout = await showDialog<bool>(
+      context: context,
+      barrierDismissible: true,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Container(
+            width: dialogWidth,
+            constraints: BoxConstraints(
+              maxHeight: screenHeight * 0.4,
+              minHeight: 160,
+            ),
+            padding: EdgeInsets.all(screenWidth < 480 ? 16 : 20),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Icon
+                  Container(
+                    padding: EdgeInsets.all(screenWidth < 480 ? 12 : 16),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withOpacity(0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.logout,
+                      size: screenWidth < 480 ? 24 : 32,
+                      color: Colors.red,
+                    ),
+                  ),
+                  SizedBox(height: screenWidth < 480 ? 12 : 16),
+                  
+                  // Title
+                  Text(
+                    'Confirm Logout',
+                    style: TextStyle(
+                      fontSize: fontSize + 1,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: screenWidth < 480 ? 6 : 8),
+                  
+                  // Message
+                  Text(
+                    'Are you sure you want to logout?',
+                    style: TextStyle(
+                      fontSize: fontSize - 2,
+                      color: Colors.grey[600],
+                      height: 1.3,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: screenWidth < 480 ? 20 : 24),
+                  
+                  // Buttons
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      Expanded(
+                        child: Container(
+                          height: screenWidth < 480 ? 40 : 44,
+                          margin: EdgeInsets.only(right: screenWidth < 480 ? 6 : 8),
+                          child: OutlinedButton(
+                            onPressed: () => Navigator.of(context).pop(false),
+                            style: OutlinedButton.styleFrom(
+                              side: BorderSide(color: Colors.grey[400]!),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                            child: Text(
+                              'Cancel',
+                              style: TextStyle(
+                                fontSize: buttonFontSize - 1,
+                                color: Colors.grey[700],
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: Container(
+                          height: screenWidth < 480 ? 40 : 44,
+                          margin: EdgeInsets.only(left: screenWidth < 480 ? 6 : 8),
+                          child: ElevatedButton(
+                            onPressed: () => Navigator.of(context).pop(true),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red,
+                              foregroundColor: Colors.white,
+                              elevation: 2,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                            child: Text(
+                              'Logout',
+                              style: TextStyle(
+                                fontSize: buttonFontSize - 1,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+
+    if (shouldLogout != true) return;
+
     try {
       await _auth.signOut();
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => SelectionScreen()),
+        MaterialPageRoute(builder: (_) => const SelectionScreen()),
         (Route<dynamic> route) => false,
       );
     } catch (e) {
@@ -503,6 +726,21 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final padding = MediaQuery.of(context).padding;
+    
+    // Calculate responsive dimensions
+    final gridCount = _getGridColumnCount(screenWidth);
+    final spacing = _getResponsiveSpacing(screenWidth);
+    final titleFontSize = _getResponsiveFontSize(screenWidth, baseSize: 20.0);
+    final bodyFontSize = _getResponsiveFontSize(screenWidth, baseSize: 14.0);
+    final containerHeight = _getResponsiveContainerHeight(screenWidth);
+    final iconSize = _getResponsiveIconSize(screenWidth);
+    final cardWidth = _getResponsiveCardWidth(screenWidth);
+    final horizontalPadding = screenWidth < 480 ? 12.0 : screenWidth < 768 ? 16.0 : 20.0;
+    final verticalPadding = screenWidth < 480 ? 8.0 : screenWidth < 768 ? 12.0 : 16.0;
+
     return Scaffold(
       key: _scaffoldKey,
       backgroundColor: const Color(0xFFF6F8FB),
@@ -515,9 +753,12 @@ class _HomePageState extends State<HomePage> {
           icon: const Icon(Icons.menu, color: Colors.black),
           onPressed: () => _scaffoldKey.currentState?.openDrawer(),
         ),
-        title: Image.asset('assets/images/logo.png', height: 40),
+        title: Image.asset(
+          'assets/images/logo.png', 
+          height: screenWidth < 480 ? 32 : 40
+        ),
         centerTitle: false,
-        toolbarHeight: 70,
+        toolbarHeight: screenWidth < 480 ? 60 : 70,
         actions: [
           IconButton(
             icon: const Icon(Icons.shopping_bag_outlined, color: Colors.black),
@@ -566,491 +807,385 @@ class _HomePageState extends State<HomePage> {
               );
             },
           ),
-          const SizedBox(width: 10),
+          SizedBox(width: horizontalPadding * 0.5),
         ],
       ),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          final gridCount = _getGridColumnCount(constraints.maxWidth);
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(12),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: EdgeInsets.symmetric(
+            horizontal: horizontalPadding,
+            vertical: verticalPadding,
+          ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // SINGLE SEARCH BAR FOR ALL
                 Container(
-                  margin: const EdgeInsets.symmetric(vertical: 10),
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                margin: EdgeInsets.symmetric(vertical: verticalPadding),
+                padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.grey.withOpacity(0.1),
+                      spreadRadius: 1,
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                   ),
                   child: TextField(
                     controller: _mainSearchController,
-                    decoration: const InputDecoration(
+                  style: TextStyle(fontSize: bodyFontSize),
+                  decoration: InputDecoration(
                       hintText: 'Search Files, Video, or Fisherman ...',
+                    hintStyle: TextStyle(fontSize: bodyFontSize - 1),
                       border: InputBorder.none,
-                      icon: Icon(Icons.search),
+                    icon: Icon(Icons.search, size: bodyFontSize + 4),
+                    contentPadding: EdgeInsets.symmetric(vertical: bodyFontSize + 4),
                     ),
                   ),
                 ),
 
                 // ------ SLIDE INFORMATION -------
-                Container(
-                  margin: const EdgeInsets.symmetric(vertical: 10),
-                  padding: const EdgeInsets.all(12),
+              _buildSectionContainer(
+                title: 'Slide Information',
+                titleFontSize: titleFontSize,
+                spacing: spacing,
+                child: _buildSlideInformationSection(gridCount, containerHeight, iconSize, cardWidth, bodyFontSize),
+              ),
+
+              // ------ VIDEO TUTORIALS -------
+              _buildSectionContainer(
+                title: 'Video Tutorials',
+                titleFontSize: titleFontSize,
+                spacing: spacing,
+                child: _buildVideoTutorialsSection(gridCount, containerHeight, iconSize, cardWidth, bodyFontSize),
+              ),
+
+              // ------ FISHERMAN PROFILES -------
+              _buildSectionContainer(
+                title: 'Fisherman Profiles',
+                titleFontSize: titleFontSize,
+                spacing: spacing,
+                child: _buildFishermanProfilesSection(bodyFontSize),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSectionContainer({
+    required String title,
+    required double titleFontSize,
+    required double spacing,
+    required Widget child,
+  }) {
+    return Container(
+      margin: EdgeInsets.symmetric(vertical: spacing),
+      padding: EdgeInsets.all(spacing),
                   decoration: BoxDecoration(
                     border: Border.all(color: Colors.grey.shade400),
                     borderRadius: BorderRadius.circular(12),
                     color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         children: [
-                          const Text(
-                            'Slide Information',
-                            style: TextStyle(
-                                fontSize: 20, fontWeight: FontWeight.w600),
+              Text(
+                title,
+                style: TextStyle(fontSize: titleFontSize, fontWeight: FontWeight.w600),
                           ),
                           const Spacer(),
-                          if (widget.userType == 'fisherman')
+              if (widget.userType == 'fisherman' && title == 'Slide Information')
                             IconButton(
-                              icon: const Icon(Icons.add_circle_outline,
-                                  color: Colors.deepPurple, size: 28),
+                  icon: const Icon(Icons.add_circle_outline, color: Colors.deepPurple, size: 28),
                               onPressed: () => _pickFile('file'),
                               tooltip: 'Upload Document',
                             ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      StreamBuilder<QuerySnapshot>(
-                        stream: _firestore
-                            .collection(filesCollection)
-                            .orderBy('timestamp', descending: true)
-                            .snapshots(),
-                        builder: (context, snapshot) {
-                          if (snapshot.connectionState ==
-                              ConnectionState.waiting) {
-                            return const Center(
-                                child: CircularProgressIndicator());
-                          }
-                          if (!snapshot.hasData ||
-                              snapshot.data!.docs.isEmpty) {
-                            return const Padding(
-                              padding: EdgeInsets.all(12),
-                              child: Text('No documents uploaded yet'),
-                            );
-                          }
-                          // ALWAYS lower-case for both field and searchText!
-                          final docs = snapshot.data!.docs.where((doc) {
-                            final data = doc.data()! as Map<String, dynamic>;
-                            final title =
-                                (data['title'] ?? '').toString().toLowerCase();
-                            return _mainSearchText.isEmpty ||
-                                title.contains(_mainSearchText);
-                          }).toList();
-
-                          if (docs.isEmpty) {
-                            return const Padding(
-                              padding: EdgeInsets.all(12),
-                              child: Text('No documents found for this search'),
-                            );
-                          }
-                          if (gridCount == 1) {
-                            return SingleChildScrollView(
-                              scrollDirection: Axis.horizontal,
-                              child: Row(
-                                children: docs.map((doc) {
-                                  final data =
-                                      doc.data()! as Map<String, dynamic>;
-                                  final title =
-                                      (data['title'] ?? 'No Title').toString();
-                                  final metadata = data['metadata'] ?? {};
-                                  final url = metadata['url'] ?? '';
-                                  final extension = metadata['extension'] ?? '';
-                                  final isVideo =
-                                      extension.toString().contains('.mp4') ||
-                                          extension.toString().contains('.mov');
-                                  return GestureDetector(
-                                    onTap: () async {
-                                      String viewerUrl;
-                                      if (extension == '.pdf') {
-                                        viewerUrl =
-                                            'https://docs.google.com/gview?embedded=true&url=${Uri.encodeComponent(url)}';
-                                      } else if ([
-                                        '.doc',
-                                        '.docx',
-                                        '.xls',
-                                        '.xlsx',
-                                        '.ppt',
-                                        '.pptx'
-                                      ].contains(extension)) {
-                                        viewerUrl =
-                                            'https://view.officeapps.live.com/op/embed.aspx?src=${Uri.encodeComponent(url)}';
-                                      } else {
-                                        viewerUrl = url;
-                                      }
-                                      final uri = Uri.parse(viewerUrl);
-                                      if (await canLaunchUrl(uri)) {
-                                        await launchUrl(uri,
-                                            mode:
-                                                LaunchMode.externalApplication);
-                                      } else {
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(
-                                          SnackBar(
-                                              content: Text(
-                                                  'Could not launch document')),
-                                        );
-                                      }
-                                    },
-                                    child: Container(
-                                      width: 120,
-                                      height: 160,
-                                      margin: const EdgeInsets.only(right: 12),
-                                      padding: const EdgeInsets.all(10),
-                                      decoration: BoxDecoration(
-                                        color: Colors.deepPurple.shade50,
-                                        borderRadius: BorderRadius.circular(12),
-                                        border: Border.all(
-                                            color: Colors.deepPurple.shade100),
-                                      ),
-                                      child: Column(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
-                                        children: [
-                                          Icon(
-                                            isVideo
-                                                ? Icons.videocam
-                                                : Icons.insert_drive_file,
-                                            size: 48,
-                                            color: Colors.deepPurple,
-                                          ),
-                                          const SizedBox(height: 10),
-                                          Flexible(
-                                            child: Text(
-                                              title,
-                                              textAlign: TextAlign.center,
-                                              style: const TextStyle(
-                                                  fontWeight: FontWeight.w600,
-                                                  fontSize: 14),
-                                              maxLines: 2,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  );
-                                }).toList(),
-                              ),
-                            );
-                          } else {
-                            return GridView.builder(
-                              shrinkWrap: true,
-                              physics: const NeverScrollableScrollPhysics(),
-                              itemCount: docs.length,
-                              gridDelegate:
-                                  SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: gridCount,
-                                mainAxisSpacing: 12,
-                                crossAxisSpacing: 12,
-                                childAspectRatio: 0.75,
-                              ),
-                              itemBuilder: (context, index) {
-                                final doc = docs[index];
-                                final data =
-                                    doc.data()! as Map<String, dynamic>;
-                                final title =
-                                    (data['title'] ?? 'No Title').toString();
-                                final metadata = data['metadata'] ?? {};
-                                final url = metadata['url'] ?? '';
-                                final extension = metadata['extension'] ?? '';
-                                final isVideo =
-                                    extension.toString().contains('.mp4') ||
-                                        extension.toString().contains('.mov');
-                                return GestureDetector(
-                                  onTap: () async {
-                                    String viewerUrl;
-                                    if (extension == '.pdf') {
-                                      viewerUrl =
-                                          'https://docs.google.com/gview?embedded=true&url=${Uri.encodeComponent(url)}';
-                                    } else if ([
-                                      '.doc',
-                                      '.docx',
-                                      '.xls',
-                                      '.xlsx',
-                                      '.ppt',
-                                      '.pptx'
-                                    ].contains(extension)) {
-                                      viewerUrl =
-                                          'https://view.officeapps.live.com/op/embed.aspx?src=${Uri.encodeComponent(url)}';
-                                    } else {
-                                      viewerUrl = url;
-                                    }
-                                    final uri = Uri.parse(viewerUrl);
-                                    if (await canLaunchUrl(uri)) {
-                                      await launchUrl(uri,
-                                          mode: LaunchMode.externalApplication);
-                                    } else {
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
-                                        SnackBar(
-                                            content: Text(
-                                                'Could not launch document')),
-                                      );
-                                    }
-                                  },
-                                  child: Container(
-                                    padding: const EdgeInsets.all(10),
-                                    decoration: BoxDecoration(
-                                      color: Colors.deepPurple.shade50,
-                                      borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(
-                                          color: Colors.deepPurple.shade100),
-                                    ),
-                                    child: Column(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        Icon(
-                                          isVideo
-                                              ? Icons.videocam
-                                              : Icons.insert_drive_file,
-                                          size: 48,
-                                          color: Colors.deepPurple,
-                                        ),
-                                        const SizedBox(height: 10),
-                                        Flexible(
-                                          child: Text(
-                                            title,
-                                            textAlign: TextAlign.center,
-                                            style: const TextStyle(
-                                                fontWeight: FontWeight.w600,
-                                                fontSize: 14),
-                                            maxLines: 2,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                );
-                              },
-                            );
-                          }
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-                // ------ VIDEO TUTORIALS -------
-                Container(
-                  margin: const EdgeInsets.symmetric(vertical: 10),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey.shade400),
-                    borderRadius: BorderRadius.circular(12),
-                    color: Colors.white,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          const Text(
-                            'Video Tutorials',
-                            style: TextStyle(
-                                fontSize: 20, fontWeight: FontWeight.w600),
-                          ),
-                          const Spacer(),
-                          if (widget.userType == 'fisherman')
-                            IconButton(
-                              icon: const Icon(Icons.add_circle_outline,
-                                  color: Colors.deepPurple, size: 28),
-                              onPressed: () => _pickFile('video'),
-                              tooltip: 'Upload Video',
+              if (widget.userType == 'fisherman' && title == 'Video Tutorials')
+                IconButton(
+                  icon: const Icon(Icons.add_circle_outline, color: Colors.deepPurple, size: 28),
+                  onPressed: () => _pickFile('video'),
+                  tooltip: 'Upload Video',
                             ),
                         ],
                       ),
-                      const SizedBox(height: 10),
-                      StreamBuilder<QuerySnapshot>(
-                        stream: _firestore
-                            .collection(videosCollection)
-                            .orderBy('timestamp', descending: true)
-                            .snapshots(),
-                        builder: (context, snapshot) {
-                          if (snapshot.connectionState ==
-                              ConnectionState.waiting) {
-                            return const Center(
-                                child: CircularProgressIndicator());
-                          }
-                          if (!snapshot.hasData ||
-                              snapshot.data!.docs.isEmpty) {
-                            return const Padding(
-                              padding: EdgeInsets.all(12),
-                              child: Text('No videos uploaded yet'),
-                            );
-                          }
-                          final videos = snapshot.data!.docs.where((doc) {
-                            final data = doc.data()! as Map<String, dynamic>;
-                            final title =
-                                (data['title'] ?? '').toString().toLowerCase();
-                            return _mainSearchText.isEmpty ||
-                                title.contains(_mainSearchText);
-                          }).toList();
+          SizedBox(height: spacing * 0.8),
+          child,
+        ],
+      ),
+    );
+  }
 
-                          if (videos.isEmpty) {
-                            return const Padding(
-                              padding: EdgeInsets.all(12),
-                              child: Text('No videos found for this search'),
-                            );
-                          }
-                          if (gridCount == 1) {
-                            return SingleChildScrollView(
-                              scrollDirection: Axis.horizontal,
-                              child: Row(
-                                children: videos.map((doc) {
-                                  final data =
-                                      doc.data()! as Map<String, dynamic>;
-                                  final title =
-                                      (data['title'] ?? 'No Title').toString();
-                                  final metadata = data['metadata'] ?? {};
-                                  final url = metadata['url'] ?? '';
-                                  return GestureDetector(
-                                    onTap: () =>
-                                        _openInAppViewer(url, '.mp4', title),
-                                    child: Container(
-                                      width: 120,
-                                      height: 160,
-                                      margin: const EdgeInsets.only(right: 12),
-                                      padding: const EdgeInsets.all(10),
-                                      decoration: BoxDecoration(
-                                        border: Border.all(
-                                            color: Colors.grey.shade300),
-                                        borderRadius: BorderRadius.circular(12),
-                                        color: Colors.grey.shade100,
-                                      ),
-                                      child: Column(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
-                                        children: [
-                                          Icon(Icons.play_circle_fill,
-                                              size: 60,
-                                              color: Colors.deepPurple),
-                                          const SizedBox(height: 8),
-                                          Flexible(
-                                            child: Text(
-                                              title,
-                                              textAlign: TextAlign.center,
-                                              style: const TextStyle(
-                                                  fontWeight: FontWeight.w500),
-                                              maxLines: 2,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  );
-                                }).toList(),
-                              ),
-                            );
-                          } else {
-                            return GridView.builder(
-                              shrinkWrap: true,
-                              physics: const NeverScrollableScrollPhysics(),
-                              itemCount: videos.length,
-                              gridDelegate:
-                                  SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: gridCount,
-                                mainAxisSpacing: 12,
-                                crossAxisSpacing: 12,
-                                childAspectRatio: 0.75,
-                              ),
-                              itemBuilder: (context, index) {
-                                final doc = videos[index];
-                                final data =
-                                    doc.data()! as Map<String, dynamic>;
-                                final title =
-                                    (data['title'] ?? 'No Title').toString();
-                                final metadata = data['metadata'] ?? {};
-                                final url = metadata['url'] ?? '';
-                                return GestureDetector(
-                                  onTap: () =>
-                                      _openInAppViewer(url, '.mp4', title),
-                                  child: Container(
-                                    padding: const EdgeInsets.all(10),
-                                    decoration: BoxDecoration(
-                                      border: Border.all(
-                                          color: Colors.grey.shade300),
-                                      borderRadius: BorderRadius.circular(12),
-                                      color: Colors.grey.shade100,
-                                    ),
-                                    child: Column(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        Icon(Icons.play_circle_fill,
-                                            size: 60, color: Colors.deepPurple),
-                                        const SizedBox(height: 8),
-                                        Flexible(
-                                          child: Text(
-                                            title,
-                                            textAlign: TextAlign.center,
-                                            style: const TextStyle(
-                                                fontWeight: FontWeight.w500),
-                                            maxLines: 2,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                );
-                              },
-                            );
-                          }
-                        },
+  Widget _buildSlideInformationSection(int gridCount, double containerHeight, double iconSize, double cardWidth, double bodyFontSize) {
+    return StreamBuilder<QuerySnapshot>(
+      stream: _firestore
+          .collection(filesCollection)
+          .orderBy('timestamp', descending: true)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return const Padding(
+            padding: EdgeInsets.all(12),
+            child: Text('No documents uploaded yet'),
+          );
+        }
+        final docs = snapshot.data!.docs.where((doc) {
+          final data = doc.data()! as Map<String, dynamic>;
+          final title = (data['title'] ?? '').toString().toLowerCase();
+          return _mainSearchText.isEmpty || title.contains(_mainSearchText);
+        }).toList();
+
+        if (docs.isEmpty) {
+          return const Padding(
+            padding: EdgeInsets.all(12),
+            child: Text('No documents found for this search'),
+          );
+        }
+
+        return SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: docs.map((doc) {
+              final data = doc.data()! as Map<String, dynamic>;
+              final title = (data['title'] ?? 'No Title').toString();
+              final metadata = data['metadata'] ?? {};
+              final url = metadata['url'] ?? '';
+              final extension = metadata['extension'] ?? '';
+              final isVideo = extension.toString().contains('.mp4') || extension.toString().contains('.mov');
+              return GestureDetector(
+                onTap: () async {
+                  String viewerUrl;
+                  if (extension == '.pdf') {
+                    viewerUrl = 'https://docs.google.com/gview?embedded=true&url=${Uri.encodeComponent(url)}';
+                  } else if ([
+                    '.doc',
+                    '.docx',
+                    '.xls',
+                    '.xlsx',
+                    '.ppt',
+                    '.pptx'
+                  ].contains(extension)) {
+                    viewerUrl = 'https://view.officeapps.live.com/op/embed.aspx?src=${Uri.encodeComponent(url)}';
+                  } else {
+                    viewerUrl = url;
+                  }
+                  final uri = Uri.parse(viewerUrl);
+                  if (await canLaunchUrl(uri)) {
+                    await launchUrl(uri, mode: LaunchMode.externalApplication);
+                  } else {
+                    ScaffoldMessenger.of(context)
+                        .showSnackBar(const SnackBar(content: Text('Could not launch document')));
+                  }
+                },
+                child: Container(
+                  width: cardWidth,
+                  height: containerHeight,
+                  margin: const EdgeInsets.only(right: 8),
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: Colors.deepPurple.shade50,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: Colors.deepPurple.shade100),
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        isVideo ? Icons.videocam : Icons.insert_drive_file,
+                        size: iconSize,
+                        color: Colors.deepPurple,
+                      ),
+                      const SizedBox(height: 2),
+                      Flexible(
+                        child: Text(
+                          title,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: bodyFontSize,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     ],
                   ),
                 ),
-                // ------ FISHERMAN PROFILES -------
-                Container(
-                  margin: const EdgeInsets.symmetric(vertical: 10),
-                  padding: const EdgeInsets.all(12),
+              );
+            }).toList(),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildVideoTutorialsSection(int gridCount, double containerHeight, double iconSize, double cardWidth, double bodyFontSize) {
+    return StreamBuilder<QuerySnapshot>(
+      stream: _firestore
+          .collection(videosCollection)
+          .orderBy('timestamp', descending: true)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return const Padding(
+            padding: EdgeInsets.all(12),
+            child: Text('No videos uploaded yet'),
+          );
+        }
+        final videos = snapshot.data!.docs.where((doc) {
+          final data = doc.data()! as Map<String, dynamic>;
+          final title = (data['title'] ?? '').toString().toLowerCase();
+          return _mainSearchText.isEmpty || title.contains(_mainSearchText);
+        }).toList();
+
+        if (videos.isEmpty) {
+          return const Padding(
+            padding: EdgeInsets.all(12),
+            child: Text('No videos found for this search'),
+          );
+        }
+
+        return SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: videos.map((doc) {
+              final data = doc.data()! as Map<String, dynamic>;
+              final title = (data['title'] ?? 'No Title').toString();
+              final metadata = data['metadata'] ?? {};
+              final url = metadata['url'] ?? '';
+              return GestureDetector(
+                onTap: () => _openInAppViewer(url, '.mp4', title),
+                child: Container(
+                  width: cardWidth,
+                  height: containerHeight,
+                  margin: const EdgeInsets.only(right: 8),
+                  padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey.shade400),
-                    borderRadius: BorderRadius.circular(12),
-                    color: Colors.white,
+                    border: Border.all(color: Colors.grey.shade300),
+                    borderRadius: BorderRadius.circular(6),
+                    color: Colors.grey.shade100,
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Fisherman Profiles',
-                        style: TextStyle(
-                            fontSize: 20, fontWeight: FontWeight.w600),
-                      ),
-                      const SizedBox(height: 10),
-                      StreamBuilder<QuerySnapshot>(
+                  child: FutureBuilder<String?>(
+                    future: _generateVideoThumbnail(url),
+                    builder: (context, thumbnailSnapshot) {
+                      return Stack(
+                        children: [
+                          // Thumbnail or fallback
+                          if (thumbnailSnapshot.connectionState == ConnectionState.done && 
+                              thumbnailSnapshot.data != null)
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(4),
+                              child: Image.file(
+                                File(thumbnailSnapshot.data!),
+                                width: double.infinity,
+                                height: double.infinity,
+                                fit: BoxFit.cover,
+                              ),
+                            )
+                          else
+                            Container(
+                              width: double.infinity,
+                              height: double.infinity,
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade200,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Icon(
+                                Icons.videocam,
+                                size: iconSize,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                          // Play button overlay
+                          Positioned.fill(
+                            child: Center(
+                              child: Container(
+                                padding: const EdgeInsets.all(3),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withOpacity(0.6),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  Icons.play_arrow,
+                                  size: iconSize - 4,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ),
+                          // Title overlay at bottom
+                          Positioned(
+                            bottom: 0,
+                            left: 0,
+                            right: 0,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withOpacity(0.7),
+                                borderRadius: const BorderRadius.only(
+                                  bottomLeft: Radius.circular(4),
+                                  bottomRight: Radius.circular(4),
+                                ),
+                              ),
+                              child: Text(
+                                title,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w500,
+                                  fontSize: bodyFontSize - 1,
+                                  color: Colors.white,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildFishermanProfilesSection(double bodyFontSize) {
+    return StreamBuilder<QuerySnapshot>(
                         stream: _firestore.collection('fisherman').snapshots(),
                         builder: (context, snapshot) {
-                          if (snapshot.connectionState ==
-                              ConnectionState.waiting) {
-                            return const Center(
-                                child: CircularProgressIndicator());
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
                           }
                           if (snapshot.hasError) {
-                            debugPrint(
-                                'Fisherman query error: ${snapshot.error}');
+          debugPrint('Fisherman query error: ${snapshot.error}');
                             return Text('Error: ${snapshot.error}');
                           }
-                          if (!snapshot.hasData ||
-                              snapshot.data!.docs.isEmpty) {
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                             debugPrint('No fisherman documents found');
                             return const Padding(
                               padding: EdgeInsets.all(12),
@@ -1059,17 +1194,10 @@ class _HomePageState extends State<HomePage> {
                           }
                           final fishermen = snapshot.data!.docs.where((doc) {
                             final data = doc.data()! as Map<String, dynamic>;
-                            final firstName = (data['firstName'] ?? '')
-                                .toString()
-                                .toLowerCase();
-                            final lastName = (data['lastName'] ?? '')
-                                .toString()
-                                .toLowerCase();
+          final firstName = (data['firstName'] ?? '').toString().toLowerCase();
+          final lastName = (data['lastName'] ?? '').toString().toLowerCase();
                             final fullName = '$firstName $lastName';
-                            return _mainSearchText.isEmpty ||
-                                firstName.contains(_mainSearchText) ||
-                                lastName.contains(_mainSearchText) ||
-                                fullName.contains(_mainSearchText);
+          return _mainSearchText.isEmpty || firstName.contains(_mainSearchText) || lastName.contains(_mainSearchText) || fullName.contains(_mainSearchText);
                           }).toList();
 
                           if (fishermen.isEmpty) {
@@ -1083,18 +1211,11 @@ class _HomePageState extends State<HomePage> {
                             scrollDirection: Axis.horizontal,
                             child: Row(
                               children: fishermen.map((doc) {
-                                final data =
-                                    doc.data()! as Map<String, dynamic>;
+              final data = doc.data()! as Map<String, dynamic>;
                                 final userId = doc.id;
-                                final firstName =
-                                    (data['firstName'] ?? 'No First Name')
-                                        .toString();
-                                final lastName =
-                                    (data['lastName'] ?? 'No Last Name')
-                                        .toString();
-                                final address =
-                                    (data['address'] ?? 'No Address')
-                                        .toString();
+              final firstName = (data['firstName'] ?? 'No First Name').toString();
+              final lastName = (data['lastName'] ?? 'No Last Name').toString();
+              final address = (data['address'] ?? 'No Address').toString();
                                 final fullName = '$firstName $lastName';
                                 return FutureBuilder<String?>(
                                   future: _getFishermanProfileImageUrl(userId),
@@ -1107,18 +1228,15 @@ class _HomePageState extends State<HomePage> {
                                       decoration: BoxDecoration(
                                         color: Colors.blue.shade50,
                                         borderRadius: BorderRadius.circular(12),
-                                        border: Border.all(
-                                            color: Colors.blue.shade100),
+                      border: Border.all(color: Colors.blue.shade100),
                                       ),
                                       child: GestureDetector(
                                         onTap: () async {
-                                          String? profileUrl =
-                                              profileSnapshot.data;
+                        String? profileUrl = profileSnapshot.data;
                                           Navigator.push(
                                             context,
                                             MaterialPageRoute(
-                                              builder: (context) =>
-                                                  VendorProfileScreen(
+                            builder: (context) => VendorProfileScreen(
                                                 fishermanId: userId,
                                                 fishermanName: fullName,
                                                 profileImageUrl: profileUrl,
@@ -1127,25 +1245,16 @@ class _HomePageState extends State<HomePage> {
                                           );
                                         },
                                         child: Column(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
+                        mainAxisAlignment: MainAxisAlignment.center,
                                           children: [
-                                            profileSnapshot.connectionState ==
-                                                        ConnectionState.done &&
-                                                    profileSnapshot.data !=
-                                                        null &&
-                                                    profileSnapshot
-                                                        .data!.isNotEmpty
+                          profileSnapshot.connectionState == ConnectionState.done &&
+                              profileSnapshot.data != null &&
+                              profileSnapshot.data!.isNotEmpty
                                                 ? CircleAvatar(
                                                     radius: 28,
-                                                    backgroundImage:
-                                                        NetworkImage(
-                                                            profileSnapshot
-                                                                .data!),
+                                  backgroundImage: NetworkImage(profileSnapshot.data!),
                                                   )
-                                                : const CircleAvatar(
-                                                    radius: 28,
-                                                  ),
+                              : const CircleAvatar(radius: 28),
                                             const SizedBox(height: 8),
                                             SizedBox(
                                               height: 38,
@@ -1153,13 +1262,9 @@ class _HomePageState extends State<HomePage> {
                                                 child: Text(
                                                   fullName,
                                                   textAlign: TextAlign.center,
-                                                  style: const TextStyle(
-                                                    fontWeight: FontWeight.w600,
-                                                    fontSize: 14,
-                                                  ),
+                                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
                                                   maxLines: 2,
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
+                                overflow: TextOverflow.ellipsis,
                                                 ),
                                               ),
                                             ),
@@ -1170,13 +1275,9 @@ class _HomePageState extends State<HomePage> {
                                                 child: Text(
                                                   address,
                                                   textAlign: TextAlign.center,
-                                                  style: TextStyle(
-                                                    fontSize: 12,
-                                                    color: Colors.grey.shade700,
-                                                  ),
+                                style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
                                                   maxLines: 2,
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
+                                overflow: TextOverflow.ellipsis,
                                                 ),
                                               ),
                                             ),
@@ -1190,23 +1291,19 @@ class _HomePageState extends State<HomePage> {
                             ),
                           );
                         },
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
     );
   }
 
   // Drawer and logo methods remain unchanged
 
   Widget _buildDrawer() {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final drawerWidth = screenWidth < 480 ? 180.0 : 200.0;
+    final logoSize = screenWidth < 480 ? 60.0 : 70.0;
+    final spacing = screenWidth < 480 ? 20.0 : 30.0;
+    
     return Drawer(
-      width: 200,
+      width: drawerWidth,
       child: Column(
         children: [
           Expanded(
@@ -1215,56 +1312,48 @@ class _HomePageState extends State<HomePage> {
               children: [
                 _buildLogoItem(
                   image: 'assets/images/citycatbalogan.png',
+                  logoSize: logoSize,
                   onTap: () async {
                     Navigator.pop(context);
-                    // Example: Open city website
-                    const url =
-                        'https://www.facebook.com/CatbaloganPulis?mibextid=qi2Omg&rdid=bVIUFXyKihSa2wsN&share_url=https%3A%2F%2Fwww.facebook.com%2Fshare%2F1Nhzw2XvMq%2F%3Fmibextid%3Dqi2Omg#; '; // update as needed
+                    const url = 'https://www.facebook.com/CatbaloganPulis?mibextid=qi2Omg&rdid=bVIUFXyKihSa2wsN&share_url=https%3A%2F%2Fwww.facebook.com%2Fshare%2F1Nhzw2XvMq%2F%3Fmibextid%3Dqi2Omg#; ';
                     if (await canLaunchUrl(Uri.parse(url))) {
-                      await launchUrl(Uri.parse(url),
-                          mode: LaunchMode.externalApplication);
+                      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
                     }
                   },
                 ),
-                const SizedBox(height: 30),
+                SizedBox(height: spacing),
                 _buildLogoItem(
                   image: 'assets/images/coastguard.png',
+                  logoSize: logoSize,
                   onTap: () async {
                     Navigator.pop(context);
-                    // Example: Open Facebook page
-                    const url =
-                        'https://www.facebook.com/profile.php?id=100064678504235'; // update as needed
+                    const url = 'https://www.facebook.com/profile.php?id=100064678504235';
                     if (await canLaunchUrl(Uri.parse(url))) {
-                      await launchUrl(Uri.parse(url),
-                          mode: LaunchMode.externalApplication);
+                      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
                     }
                   },
                 ),
-                const SizedBox(height: 30),
+                SizedBox(height: spacing),
                 _buildLogoItem(
                   image: 'assets/images/map.png',
+                  logoSize: logoSize,
                   onTap: () async {
                     Navigator.pop(context);
-                    // Example: Open Google Maps
-                    const url =
-                        'https://www.google.com/maps/place/City+of+Catbalogan,+Samar/@11.8002446,124.8212436,11z/data=!3m1!4b1!4m6!3m5!1s0x330834d7864d55d7:0xcbc9fd0999445956!8m2!3d11.8568348!4d124.8844867!16s%2Fm%2F02p_dgf?entry=ttu&g_ep=EgoyMDI1MDYxMS4wIKXMDSoASAFQAw%3D%3D'; // update as needed
+                    const url = 'https://www.google.com/maps/place/City+of+Catbalogan,+Samar/@11.8002446,124.8212436,11z/data=!3m1!4b1!4m6!3m5!1s0x330834d7864d55d7:0xcbc9fd0999445956!8m2!3d11.8568348!4d124.8844867!16s%2Fm%2F02p_dgf?entry=ttu&g_ep=EgoyMDI1MDYxMS4wIKXMDSoASAFQAw%3D%3D';
                     if (await canLaunchUrl(Uri.parse(url))) {
-                      await launchUrl(Uri.parse(url),
-                          mode: LaunchMode.externalApplication);
+                      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
                     }
                   },
                 ),
-                const SizedBox(height: 30),
+                SizedBox(height: spacing),
                 _buildLogoItem(
                   image: 'assets/images/firestation.png',
+                  logoSize: logoSize,
                   onTap: () async {
                     Navigator.pop(context);
-                    // Example: Open Fire Station FB or info
-                    const url =
-                        'https://www.facebook.com/profile.php?id=100064703287688'; // update as needed
+                    const url = 'https://www.facebook.com/profile.php?id=100064703287688';
                     if (await canLaunchUrl(Uri.parse(url))) {
-                      await launchUrl(Uri.parse(url),
-                          mode: LaunchMode.externalApplication);
+                      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
                     }
                   },
                 ),
@@ -1272,17 +1361,22 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.all(20.0),
+            padding: EdgeInsets.all(screenWidth < 480 ? 16.0 : 20.0),
             child: ElevatedButton.icon(
-              icon: const Icon(Icons.logout, size: 28, color: Colors.white),
-              label:
-                  const Text('Logout', style: TextStyle(color: Colors.white)),
+              icon: Icon(Icons.logout, size: screenWidth < 480 ? 24 : 28, color: Colors.white),
+              label: Text(
+                'Logout', 
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: screenWidth < 480 ? 14 : 16,
+                ),
+              ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),
-                minimumSize: const Size(double.infinity, 50),
+                minimumSize: Size(double.infinity, screenWidth < 480 ? 45 : 50),
               ),
               onPressed: _signOut,
             ),
@@ -1292,15 +1386,19 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildLogoItem({required String image, required VoidCallback onTap}) {
+  Widget _buildLogoItem({
+    required String image, 
+    required double logoSize,
+    required VoidCallback onTap,
+  }) {
     return InkWell(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(10),
+        padding: EdgeInsets.all(logoSize * 0.15),
         child: Image.asset(
           image,
-          height: 70,
-          width: 100,
+          height: logoSize,
+          width: logoSize * 1.4,
           fit: BoxFit.contain,
         ),
       ),
@@ -1312,7 +1410,7 @@ class PdfViewerScreen extends StatefulWidget {
   final String pdfUrl;
   final String title;
 
-  const PdfViewerScreen({required this.pdfUrl, required this.title});
+  const PdfViewerScreen({super.key, required this.pdfUrl, required this.title});
 
   @override
   _PdfViewerScreenState createState() => _PdfViewerScreenState();
@@ -1365,8 +1463,7 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
 
       if (response.statusCode == 200) {
         final dir = await getTemporaryDirectory();
-        final file =
-            File('${dir.path}/${DateTime.now().millisecondsSinceEpoch}.pdf');
+        final file = File('${dir.path}/${DateTime.now().millisecondsSinceEpoch}.pdf');
         await file.writeAsBytes(response.data as List<int>);
 
         setState(() {
@@ -1501,7 +1598,7 @@ class _InAppVideoPlayerState extends State<_InAppVideoPlayer> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Color(0xFF7A9BAE),
+        backgroundColor: const Color(0xFF7A9BAE),
         iconTheme: const IconThemeData(color: Colors.white),
         title: Text(widget.title, style: const TextStyle(color: Colors.white)),
       ),
@@ -1524,8 +1621,8 @@ class DocumentWebView extends StatefulWidget {
     required this.fileUrl,
     required this.title,
     required this.mimeType,
-    Key? key,
-  }) : super(key: key);
+    super.key,
+  });
 
   @override
   State<DocumentWebView> createState() => _DocumentWebViewState();
@@ -1646,8 +1743,7 @@ class _DocumentWebViewState extends State<DocumentWebView> {
             icon: const Icon(Icons.open_in_new),
             onPressed: () {
               if (kIsWeb) {
-                launchUrl(Uri.parse(widget.fileUrl),
-                    mode: LaunchMode.externalApplication);
+                launchUrl(Uri.parse(widget.fileUrl), mode: LaunchMode.externalApplication);
               } else {
                 OpenFilex.open(widget.fileUrl);
               }
@@ -1656,8 +1752,7 @@ class _DocumentWebViewState extends State<DocumentWebView> {
           if (kIsWeb)
             IconButton(
               icon: const Icon(Icons.fullscreen),
-              onPressed: () => launchUrl(Uri.parse(_getViewerUrl()),
-                  mode: LaunchMode.externalApplication),
+              onPressed: () => launchUrl(Uri.parse(_getViewerUrl()), mode: LaunchMode.externalApplication),
               tooltip: 'Open in Full Screen',
             ),
         ],
@@ -1706,7 +1801,7 @@ class _DocumentWebViewState extends State<DocumentWebView> {
           ),
         ),
         Expanded(
-          child: Container(
+          child: SizedBox(
             width: double.infinity,
             height: double.infinity,
             child: _buildIframe(viewerUrl),
@@ -1736,8 +1831,7 @@ class _DocumentWebViewState extends State<DocumentWebView> {
     ''';
 
     // Use data URL to embed the HTML
-    final dataUrl =
-        'data:text/html;charset=utf-8,${Uri.encodeComponent(iframeHtml)}';
+    final dataUrl = 'data:text/html;charset=utf-8,${Uri.encodeComponent(iframeHtml)}';
 
     return Container(
       decoration: BoxDecoration(

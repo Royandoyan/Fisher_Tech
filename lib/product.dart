@@ -10,21 +10,83 @@ class ProductScreen extends StatelessWidget {
   final String fishermanName;
 
   const ProductScreen({
-    Key? key,
+    super.key,
     this.fishermanId,
     this.forVendor = false,
     this.fishermanName = '',
-  }) : super(key: key);
+  });
+
+  // Responsive design helpers
+  double _getResponsiveFontSize(double width, {double baseSize = 16.0}) {
+    if (width < 480) return baseSize - 2;
+    if (width < 768) return baseSize - 1;
+    if (width < 1024) return baseSize;
+    return baseSize + 1;
+  }
+
+  double _getResponsiveSpacing(double width) {
+    if (width < 480) return 8.0;
+    if (width < 768) return 12.0;
+    if (width < 1024) return 16.0;
+    return 20.0;
+  }
+
+  double _getResponsivePadding(double width) {
+    if (width < 480) return 8.0;
+    if (width < 768) return 12.0;
+    if (width < 1024) return 16.0;
+    return 20.0;
+  }
+
+  double _getResponsiveIconSize(double width) {
+    if (width < 480) return 20.0;
+    if (width < 768) return 22.0;
+    if (width < 1024) return 24.0;
+    return 26.0;
+  }
+
+  double _getResponsiveImageSize(double width) {
+    if (width < 480) return 45.0;
+    if (width < 768) return 50.0;
+    if (width < 1024) return 55.0;
+    return 60.0;
+  }
+
+  double _getResponsiveButtonHeight(double width) {
+    if (width < 480) return 32.0;
+    if (width < 768) return 35.0;
+    if (width < 1024) return 38.0;
+    return 40.0;
+  }
 
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final spacing = _getResponsiveSpacing(screenWidth);
+    final padding = _getResponsivePadding(screenWidth);
+    final fontSize = _getResponsiveFontSize(screenWidth);
+    final iconSize = _getResponsiveIconSize(screenWidth);
+    final imageSize = _getResponsiveImageSize(screenWidth);
+    final buttonHeight = _getResponsiveButtonHeight(screenWidth);
+    final toolbarHeight = screenWidth < 480 ? 60.0 : 70.0;
 
     // If not vendor mode, check user login
     if (!forVendor && user == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('My Products')),
-        body: const Center(child: Text('Not logged in')),
+        appBar: AppBar(
+          title: Text(
+            'My Products',
+            style: TextStyle(fontSize: fontSize),
+          ),
+          toolbarHeight: toolbarHeight,
+        ),
+        body: Center(
+          child: Text(
+            'Not logged in',
+            style: TextStyle(fontSize: fontSize),
+          ),
+        ),
       );
     }
 
@@ -33,13 +95,17 @@ class ProductScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: const Color(0xFF3A4A6C),
+        foregroundColor: Colors.white,
         title: Text(
           forVendor
               ? (fishermanName.isNotEmpty
                   ? "$fishermanName's Products"
                   : "Vendor's Products")
               : "My Products",
+          style: TextStyle(fontSize: fontSize + 2, color: Colors.white),
         ),
+        toolbarHeight: toolbarHeight,
       ),
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
@@ -49,21 +115,27 @@ class ProductScreen extends StatelessWidget {
         builder: (context, snapshot) {
           if (snapshot.hasError) {
             return Center(
-                child: Text('Error: ${snapshot.error}',
-                    style: const TextStyle(color: Colors.red)));
+                child: Text(
+                  'Error: ${snapshot.error}',
+                  style: TextStyle(color: Colors.red, fontSize: fontSize),
+                ));
           }
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
             return Center(
-                child: Text(forVendor
-                    ? 'No products found for this vendor.'
-                    : 'No products uploaded.'));
+                child: Text(
+                  forVendor
+                      ? 'No products found for this vendor.'
+                      : 'No products uploaded.',
+                  style: TextStyle(fontSize: fontSize),
+                ));
           }
           final docs = snapshot.data!.docs;
 
           return ListView.builder(
+            padding: EdgeInsets.all(padding),
             itemCount: docs.length,
             itemBuilder: (context, index) {
               final data = docs[index].data() as Map<String, dynamic>;
@@ -74,65 +146,98 @@ class ProductScreen extends StatelessWidget {
                   (data['image'] as String).isNotEmpty) {
                 leadingWidget = Image.network(
                   data['image'],
-                  width: 50,
-                  height: 50,
+                  width: imageSize,
+                  height: imageSize,
                   fit: BoxFit.cover,
                   errorBuilder: (context, error, stackTrace) =>
-                      const Icon(Icons.broken_image, size: 40),
+                      Icon(Icons.broken_image, size: imageSize - 10),
                 );
               } else {
-                leadingWidget = const Icon(Icons.image, size: 40);
+                leadingWidget = Icon(Icons.image, size: imageSize - 10);
               }
 
               return Card(
-                margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                margin: EdgeInsets.symmetric(horizontal: padding, vertical: spacing * 0.5),
                 child: ListTile(
                   leading: leadingWidget,
-                  title: Text(data['name']?.toString() ?? 'No Name'),
-                  subtitle: Text('₱${data['price']?.toString() ?? ''}'),
+                  title: Text(
+                    data['name']?.toString() ?? 'No Name',
+                    style: TextStyle(fontSize: fontSize),
+                  ),
+                  subtitle: Text(
+                    '₱${data['price']?.toString() ?? ''}',
+                    style: TextStyle(fontSize: fontSize - 2),
+                  ),
                   trailing: forVendor
-                      ? ElevatedButton(
-                          onPressed: () {
-                            // Go to AddToCart and prefill details for single product order
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => AddToCart(
-                                  userType: 'customer',
-                                  initialOrder: {
-                                    'name': data['name'] ?? '',
-                                    'price': data['price'] ?? '',
-                                    'image': data['image'] ?? '',
-                                    'sellerId': data['sellerId'] ?? '',
-                                    'sellerName': data['sellerName'] ?? '',
-                                    'sellerContact': data['sellerContact'] ?? '',
-                                    'quantity': 1,
-                                  },
+                      ? SizedBox(
+                          height: buttonHeight,
+                          child: ElevatedButton(
+                            onPressed: () {
+                              // Go to AddToCart and prefill details for single product order
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => AddToCart(
+                                    userType: 'customer',
+                                    initialOrder: {
+                                      'name': data['name'] ?? '',
+                                      'price': data['price'] ?? '',
+                                      'image': data['image'] ?? '',
+                                      'sellerId': data['sellerId'] ?? '',
+                                      'sellerName': data['sellerName'] ?? '',
+                                      'sellerContact': data['sellerContact'] ?? '',
+                                      'quantity': 1,
+                                    },
+                                  ),
                                 ),
+                              );
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF3A4A6C),
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(6),
                               ),
-                            );
-                          },
-                          child: const Text('Order'),
+                            ),
+                            child: Text(
+                              'Order',
+                              style: TextStyle(
+                                fontSize: fontSize - 4,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
                         )
                       : IconButton(
-                          icon: const Icon(Icons.delete, color: Colors.red),
+                          icon: Icon(Icons.delete, color: Colors.red, size: iconSize),
                           onPressed: () async {
                             final confirm = await showDialog<bool>(
                               context: context,
                               builder: (context) => AlertDialog(
-                                title: const Text('Remove Product'),
-                                content: const Text(
-                                    'Are you sure you want to remove this product?'),
+                                title: Text(
+                                  'Remove Product',
+                                  style: TextStyle(fontSize: fontSize),
+                                ),
+                                content: Text(
+                                  'Are you sure you want to remove this product?',
+                                  style: TextStyle(fontSize: fontSize - 2),
+                                ),
                                 actions: [
                                   TextButton(
                                     onPressed: () =>
                                         Navigator.pop(context, false),
-                                    child: const Text('Cancel'),
+                                    child: Text(
+                                      'Cancel',
+                                      style: TextStyle(fontSize: fontSize - 2),
+                                    ),
                                   ),
                                   ElevatedButton(
                                     onPressed: () =>
                                         Navigator.pop(context, true),
-                                    child: const Text('Remove'),
+                                    child: Text(
+                                      'Remove',
+                                      style: TextStyle(fontSize: fontSize - 2),
+                                    ),
                                   ),
                                 ],
                               ),
@@ -143,8 +248,12 @@ class ProductScreen extends StatelessWidget {
                                   .doc(docs[index].id)
                                   .delete();
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                    content: Text('Product removed')),
+                                SnackBar(
+                                  content: Text(
+                                    'Product removed',
+                                    style: TextStyle(fontSize: fontSize - 2),
+                                  ),
+                                ),
                               );
                             }
                           },

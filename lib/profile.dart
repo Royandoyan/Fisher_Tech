@@ -14,7 +14,7 @@ import 'product.dart';
 class ProfileScreen extends StatefulWidget {
   final String userType;
 
-  const ProfileScreen({Key? key, required this.userType}) : super(key: key);
+  const ProfileScreen({super.key, required this.userType});
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -25,6 +25,49 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool isLoading = true;
   String? userType;
   String? profileImageUrl;
+
+  // Responsive design helpers
+  double _getResponsiveFontSize(double width, {double baseSize = 16.0}) {
+    if (width < 480) return baseSize - 2;
+    if (width < 768) return baseSize - 1;
+    if (width < 1024) return baseSize;
+    return baseSize + 1;
+  }
+
+  double _getResponsiveSpacing(double width) {
+    if (width < 480) return 8.0;
+    if (width < 768) return 12.0;
+    if (width < 1024) return 16.0;
+    return 20.0;
+  }
+
+  double _getResponsivePadding(double width) {
+    if (width < 480) return 8.0;
+    if (width < 768) return 12.0;
+    if (width < 1024) return 16.0;
+    return 20.0;
+  }
+
+  double _getResponsiveIconSize(double width) {
+    if (width < 480) return 20.0;
+    if (width < 768) return 22.0;
+    if (width < 1024) return 24.0;
+    return 26.0;
+  }
+
+  double _getResponsiveAvatarRadius(double width) {
+    if (width < 480) return 40.0;
+    if (width < 768) return 45.0;
+    if (width < 1024) return 50.0;
+    return 55.0;
+  }
+
+  double _getResponsiveButtonHeight(double width) {
+    if (width < 480) return 32.0;
+    if (width < 768) return 35.0;
+    if (width < 1024) return 38.0;
+    return 40.0;
+  }
 
   @override
   void initState() {
@@ -182,7 +225,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to upload image. Try again.')),
+        const SnackBar(content: Text('Failed to upload image. Try again.')),
       );
     }
   }
@@ -197,6 +240,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final spacing = _getResponsiveSpacing(screenWidth);
+    final padding = _getResponsivePadding(screenWidth);
+    final fontSize = _getResponsiveFontSize(screenWidth);
+    final iconSize = _getResponsiveIconSize(screenWidth);
+    final avatarRadius = _getResponsiveAvatarRadius(screenWidth);
+    final cameraIconSize = screenWidth < 480 ? 16.0 : 20.0;
+    final cameraRadius = screenWidth < 480 ? 15.0 : 18.0;
+    
     if (isLoading) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
@@ -209,10 +261,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Text('Failed to load profile data'),
+              Text(
+                'Failed to load profile data',
+                style: TextStyle(fontSize: fontSize),
+              ),
+              SizedBox(height: spacing),
               ElevatedButton(
                 onPressed: _fetchUserData,
-                child: const Text('Retry'),
+                child: Text('Retry', style: TextStyle(fontSize: fontSize - 2)),
               ),
             ],
           ),
@@ -223,8 +279,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
+        backgroundColor: const Color(0xFF3A4A6C),
+        foregroundColor: Colors.white,
+        title: Text(
+          'Profile',
+          style: TextStyle(fontSize: fontSize + 6, color: Colors.white, fontWeight: FontWeight.bold),
+        ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          icon: Icon(Icons.arrow_back, color: Colors.white, size: iconSize),
           onPressed: () {
             Navigator.pushReplacement(
               context,
@@ -234,17 +296,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
             );
           },
         ),
-        backgroundColor: Colors.white,
         elevation: 0,
+        toolbarHeight: screenWidth < 480 ? 60.0 : 70.0,
       ),
       body: Column(
         children: [
-          const SizedBox(height: 10),
+          SizedBox(height: spacing * 0.8),
           Stack(
             alignment: Alignment.center,
             children: [
               CircleAvatar(
-                radius: 50,
+                radius: avatarRadius,
                 backgroundColor: Colors.grey,
                 backgroundImage: (profileImageUrl != null && profileImageUrl!.isNotEmpty)
                     ? NetworkImage(profileImageUrl!)
@@ -256,28 +318,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 child: GestureDetector(
                   onTap: _pickAndUploadProfileImage,
                   child: CircleAvatar(
-                    radius: 18,
+                    radius: cameraRadius,
                     backgroundColor: Colors.white,
-                    child: Icon(Icons.camera_alt, size: 20, color: Colors.black),
+                    child: Icon(Icons.camera_alt, size: cameraIconSize, color: Colors.black),
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          SizedBox(height: spacing * 0.8),
           Text(
             _getFullName(),
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              fontSize: fontSize + 2,
+              fontWeight: FontWeight.bold,
+            ),
           ),
-          const SizedBox(height: 4),
+          SizedBox(height: 4),
           Text(
             '${userData?['email'] ?? 'No email'} | ${userData?['cpNumber'] ?? 'No cpNumber'}',
-            style: const TextStyle(fontSize: 14, color: Colors.grey),
+            style: TextStyle(
+              fontSize: fontSize - 2,
+              color: Colors.grey,
+            ),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 20),
+          SizedBox(height: spacing * 1.5),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: EdgeInsets.symmetric(horizontal: padding),
             child: Card(
               elevation: 2,
               shape: RoundedRectangleBorder(
@@ -286,28 +354,37 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: Column(
                 children: [
                   ListTile(
-                    leading: const Icon(Icons.edit),
-                    title: const Text('Edit profile information'),
+                    leading: Icon(Icons.edit, size: iconSize),
+                    title: Text(
+                      'Edit profile information',
+                      style: TextStyle(fontSize: fontSize),
+                    ),
                     onTap: () {
                       _navigateToEditProfile();
                     },
                   ),
                   if ((userType ?? widget.userType) == 'fisherman')
                     ListTile(
-                      leading: const Icon(Icons.inventory_2),
-                      title: const Text('My Products'),
+                      leading: Icon(Icons.inventory_2, size: iconSize),
+                      title: Text(
+                        'My Products',
+                        style: TextStyle(fontSize: fontSize),
+                      ),
                       onTap: () {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => ProductScreen(),
+                            builder: (context) => const ProductScreen(),
                           ),
                         );
                       },
                     ),
                   ListTile(
-                    leading: const Icon(Icons.info),
-                    title: const Text('Developer Details'),
+                    leading: Icon(Icons.info, size: iconSize),
+                    title: Text(
+                      'Developer Details',
+                      style: TextStyle(fontSize: fontSize),
+                    ),
                     onTap: () {
                       Navigator.push(
                         context,
@@ -350,11 +427,40 @@ class EditProfileScreen extends StatelessWidget {
   final TextEditingController _addressController = TextEditingController();
   final TextEditingController _cpNumberController = TextEditingController();
 
+  // Responsive design helpers
+  double _getResponsiveFontSize(double width, {double baseSize = 16.0}) {
+    if (width < 480) return baseSize - 2;
+    if (width < 768) return baseSize - 1;
+    if (width < 1024) return baseSize;
+    return baseSize + 1;
+  }
+
+  double _getResponsiveSpacing(double width) {
+    if (width < 480) return 8.0;
+    if (width < 768) return 12.0;
+    if (width < 1024) return 16.0;
+    return 20.0;
+  }
+
+  double _getResponsivePadding(double width) {
+    if (width < 480) return 8.0;
+    if (width < 768) return 12.0;
+    if (width < 1024) return 16.0;
+    return 20.0;
+  }
+
+  double _getResponsiveIconSize(double width) {
+    if (width < 480) return 20.0;
+    if (width < 768) return 22.0;
+    if (width < 1024) return 24.0;
+    return 26.0;
+  }
+
   EditProfileScreen({
-    Key? key,
+    super.key,
     required this.userData,
     required this.userType,
-  }) : super(key: key) {
+  }) {
     _firstNameController.text = userData['firstName'] ?? '';
     _middleNameController.text = userData['middleName'] ?? '';
     _lastNameController.text = userData['lastName'] ?? '';
@@ -364,12 +470,24 @@ class EditProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final spacing = _getResponsiveSpacing(screenWidth);
+    final padding = _getResponsivePadding(screenWidth);
+    final fontSize = _getResponsiveFontSize(screenWidth);
+    final iconSize = _getResponsiveIconSize(screenWidth);
+    
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Edit Profile'),
+        backgroundColor: const Color(0xFF3A4A6C),
+        foregroundColor: Colors.white,
+        title: Text(
+          'Edit Profile',
+          style: TextStyle(fontSize: fontSize + 2, color: Colors.white),
+        ),
+        toolbarHeight: screenWidth < 480 ? 60.0 : 70.0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.save),
+            icon: Icon(Icons.save, size: iconSize, color: Colors.white),
             onPressed: () {
               _saveProfileChanges(context);
             },
@@ -377,15 +495,15 @@ class EditProfileScreen extends StatelessWidget {
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
+        padding: EdgeInsets.all(padding),
         child: Column(
           children: [
-            const SizedBox(height: 20),
+            SizedBox(height: spacing * 1.5),
             TextFormField(
               controller: _firstNameController,
               decoration: InputDecoration(
                 labelText: 'First Name',
-                labelStyle: TextStyle(color: Colors.grey[600]),
+                labelStyle: TextStyle(color: Colors.grey[600], fontSize: fontSize - 2),
                 filled: true,
                 fillColor: Colors.grey[50],
                 border: OutlineInputBorder(
@@ -400,17 +518,17 @@ class EditProfileScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(10),
                   borderSide: const BorderSide(color: Colors.blue, width: 2),
                 ),
-                contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 14),
+                contentPadding: EdgeInsets.symmetric(
+                    horizontal: padding, vertical: padding * 0.8),
               ),
-              style: const TextStyle(fontSize: 16),
+              style: TextStyle(fontSize: fontSize),
             ),
-            const SizedBox(height: 20),
+            SizedBox(height: spacing * 1.5),
             TextFormField(
               controller: _middleNameController,
               decoration: InputDecoration(
                 labelText: 'Middle Name',
-                labelStyle: TextStyle(color: Colors.grey[600]),
+                labelStyle: TextStyle(color: Colors.grey[600], fontSize: fontSize - 2),
                 filled: true,
                 fillColor: Colors.grey[50],
                 border: OutlineInputBorder(
@@ -425,17 +543,17 @@ class EditProfileScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(10),
                   borderSide: const BorderSide(color: Colors.blue, width: 2),
                 ),
-                contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 14),
+                contentPadding: EdgeInsets.symmetric(
+                    horizontal: padding, vertical: padding * 0.8),
               ),
-              style: const TextStyle(fontSize: 16),
+              style: TextStyle(fontSize: fontSize),
             ),
-            const SizedBox(height: 20),
+            SizedBox(height: spacing * 1.5),
             TextFormField(
               controller: _lastNameController,
               decoration: InputDecoration(
                 labelText: 'Last Name',
-                labelStyle: TextStyle(color: Colors.grey[600]),
+                labelStyle: TextStyle(color: Colors.grey[600], fontSize: fontSize - 2),
                 filled: true,
                 fillColor: Colors.grey[50],
                 border: OutlineInputBorder(
@@ -450,18 +568,18 @@ class EditProfileScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(10),
                   borderSide: const BorderSide(color: Colors.blue, width: 2),
                 ),
-                contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 14),
+                contentPadding: EdgeInsets.symmetric(
+                    horizontal: padding, vertical: padding * 0.8),
               ),
-              style: const TextStyle(fontSize: 16),
+              style: TextStyle(fontSize: fontSize),
             ),
-            const SizedBox(height: 20),
+            SizedBox(height: spacing * 1.5),
             TextFormField(
               controller: _cpNumberController,
               keyboardType: TextInputType.phone,
               decoration: InputDecoration(
                 labelText: 'Contact Number',
-                labelStyle: TextStyle(color: Colors.grey[600]),
+                labelStyle: TextStyle(color: Colors.grey[600], fontSize: fontSize - 2),
                 filled: true,
                 fillColor: Colors.grey[50],
                 border: OutlineInputBorder(
@@ -476,18 +594,18 @@ class EditProfileScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(10),
                   borderSide: const BorderSide(color: Colors.blue, width: 2),
                 ),
-                contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 14),
+                contentPadding: EdgeInsets.symmetric(
+                    horizontal: padding, vertical: padding * 0.8),
               ),
-              style: const TextStyle(fontSize: 16),
+              style: TextStyle(fontSize: fontSize),
             ),
-            const SizedBox(height: 20),
+            SizedBox(height: spacing * 1.5),
             TextFormField(
               controller: _addressController,
               maxLines: 2,
               decoration: InputDecoration(
                 labelText: 'Address',
-                labelStyle: TextStyle(color: Colors.grey[600]),
+                labelStyle: TextStyle(color: Colors.grey[600], fontSize: fontSize - 2),
                 filled: true,
                 fillColor: Colors.grey[50],
                 border: OutlineInputBorder(
@@ -502,10 +620,10 @@ class EditProfileScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(10),
                   borderSide: const BorderSide(color: Colors.blue, width: 2),
                 ),
-                contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 14),
+                contentPadding: EdgeInsets.symmetric(
+                    horizontal: padding, vertical: padding * 0.8),
               ),
-              style: const TextStyle(fontSize: 16),
+              style: TextStyle(fontSize: fontSize),
             ),
           ],
         ),

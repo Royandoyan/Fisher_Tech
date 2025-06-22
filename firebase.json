@@ -1,1 +1,26 @@
-{"flutter":{"platforms":{"dart":{"lib/firebase_options.dart":{"projectId":"fisher-tech","configurations":{"android":"1:666394819939:android:e1aad4e46bccfa54a0a756","web":"1:666394819939:web:75ea251eef47ce7da0a756"}}},"android":{"default":{"projectId":"fisher-tech","appId":"1:666394819939:android:e1aad4e46bccfa54a0a756","fileOutput":"android/app/google-services.json"}}}}}
+{
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "flutter": {
+    "platforms": {
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "fisher-tech",
+          "configurations": {
+            "android": "1:666394819939:android:e1aad4e46bccfa54a0a756",
+            "web": "1:666394819939:web:75ea251eef47ce7da0a756"
+          }
+        }
+      },
+      "android": {
+        "default": {
+          "projectId": "fisher-tech",
+          "appId": "1:666394819939:android:e1aad4e46bccfa54a0a756",
+          "fileOutput": "android/app/google-services.json"
+        }
+      }
+    }
+  }
+}
