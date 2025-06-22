@@ -737,6 +737,11 @@ class _NotificationScreenState extends State<NotificationScreen> {
   }
 
   void _showSellerOrderActionDialog(BuildContext context, String orderId, Map<String, dynamic> notificationData) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final buttonHeight = _getResponsiveButtonHeight(screenWidth);
+    final buttonFontSize = _getResponsiveFontSize(screenWidth, baseSize: 14.0);
+    final dialogWidth = screenWidth < 480 ? screenWidth * 0.9 : screenWidth < 768 ? 400.0 : 500.0;
+    
     final buyerFirstName = notificationData['buyerFirstName'] ?? '';
     final buyerMiddleName = notificationData['buyerMiddleName'] ?? '';
     final buyerLastName = notificationData['buyerLastName'] ?? '';
@@ -752,61 +757,185 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
     showDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('New Order Details'),
-        content: SingleChildScrollView(
+      builder: (dialogContext) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Container(
+          width: dialogWidth,
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.8,
+          ),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              if (productImage.isNotEmpty)
-                Center(
-                  child: Image.network(productImage,
-                      width: 120, height: 100, fit: BoxFit.cover),
+              // Header
+              Container(
+                padding: EdgeInsets.all(screenWidth < 480 ? 16 : 20),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1A3D7C),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(16),
+                    topRight: Radius.circular(16),
+                  ),
                 ),
-              const SizedBox(height: 10),
-              _orderDetailRow('Product Name', productName),
-              _orderDetailRow('Total Amount', '₱${totalAmount.toStringAsFixed(2)}'),
-              _orderDetailRow('Quantity', quantity.toString()),
-              _orderDetailRow('Buyer Name', '$buyerFirstName $buyerMiddleName $buyerLastName'),
-              _orderDetailRow('Buyer Address', buyerAddress),
-              _orderDetailRow('Buyer Municipality', buyerMunicipality),
-              _orderDetailRow('Buyer Province', buyerProvince),
-              _orderDetailRow('Order Date', notificationData['createdAt'] != null && 
-                  notificationData['createdAt'] is Timestamp
-                  ? DateFormat('MMM d, y – hh:mm a')
-                      .format((notificationData['createdAt'] as Timestamp).toDate())
-                  : ''),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.shopping_cart,
+                      color: Colors.white,
+                      size: screenWidth < 480 ? 20 : 24,
+                    ),
+                    SizedBox(width: screenWidth < 480 ? 8 : 12),
+                    Expanded(
+                      child: Text(
+                        'New Order Details',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: _getResponsiveFontSize(screenWidth, baseSize: 18.0),
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              
+              // Content
+              Flexible(
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.all(screenWidth < 480 ? 16 : 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (productImage.isNotEmpty)
+                        Center(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.grey.shade300),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.network(
+                                productImage,
+                                width: screenWidth < 480 ? 100 : 120,
+                                height: screenWidth < 480 ? 80 : 100,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                          ),
+                        ),
+                      SizedBox(height: screenWidth < 480 ? 12 : 16),
+                      _orderDetailRow('Product Name', productName),
+                      _orderDetailRow('Total Amount', '₱${totalAmount.toStringAsFixed(2)}'),
+                      _orderDetailRow('Quantity', quantity.toString()),
+                      _orderDetailRow('Buyer Name', '$buyerFirstName $buyerMiddleName $buyerLastName'),
+                      _orderDetailRow('Buyer Address', buyerAddress),
+                      _orderDetailRow('Buyer Municipality', buyerMunicipality),
+                      _orderDetailRow('Buyer Province', buyerProvince),
+                      _orderDetailRow('Order Date', notificationData['createdAt'] != null && 
+                          notificationData['createdAt'] is Timestamp
+                          ? DateFormat('MMM d, y – hh:mm a')
+                              .format((notificationData['createdAt'] as Timestamp).toDate())
+                          : ''),
+                    ],
+                  ),
+                ),
+              ),
+              
+              // Buttons
+              Container(
+                padding: EdgeInsets.all(screenWidth < 480 ? 12 : 16),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  borderRadius: const BorderRadius.only(
+                    bottomLeft: Radius.circular(16),
+                    bottomRight: Radius.circular(16),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Container(
+                        height: buttonHeight,
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.pop(dialogContext),
+                          style: OutlinedButton.styleFrom(
+                            side: BorderSide(color: Colors.grey.shade400),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: Text(
+                            'Close',
+                            style: TextStyle(
+                              fontSize: buttonFontSize,
+                              color: Colors.grey.shade700,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: screenWidth < 480 ? 8 : 12),
+                    Expanded(
+                      child: Container(
+                        height: buttonHeight,
+                        child: ElevatedButton(
+                          onPressed: () async {
+                            Navigator.pop(dialogContext);
+                            await _acceptOrder(context, orderId, buyerId, sellerId, productName);
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: Text(
+                            'Accept',
+                            style: TextStyle(
+                              fontSize: buttonFontSize,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: screenWidth < 480 ? 8 : 12),
+                    Expanded(
+                      child: Container(
+                        height: buttonHeight,
+                        child: ElevatedButton(
+                          onPressed: () async {
+                            Navigator.pop(dialogContext);
+                            await _cancelOrder(context, orderId, buyerId, sellerId, productName);
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: Text(
+                            'Cancel',
+                            style: TextStyle(
+                              fontSize: buttonFontSize,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Close'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(dialogContext);
-              await _acceptOrder(context, orderId, buyerId, sellerId, productName);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Accept Order'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(dialogContext);
-              await _cancelOrder(context, orderId, buyerId, sellerId, productName);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Cancel Order'),
-          ),
-        ],
       ),
     );
   }
@@ -814,6 +943,12 @@ class _NotificationScreenState extends State<NotificationScreen> {
   void _showOrderActionDialog(BuildContext context, String orderId,
       String? buyerId, String? sellerId) async {
     if (buyerId == null || sellerId == null) return;
+    
+    final screenWidth = MediaQuery.of(context).size.width;
+    final buttonHeight = _getResponsiveButtonHeight(screenWidth);
+    final buttonFontSize = _getResponsiveFontSize(screenWidth, baseSize: 14.0);
+    final dialogWidth = screenWidth < 480 ? screenWidth * 0.9 : screenWidth < 768 ? 400.0 : 500.0;
+    
     DocumentSnapshot? orderDoc;
     try {
       // Try seller_orders first
@@ -861,109 +996,237 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
     showDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Order Details'),
-        content: SingleChildScrollView(
+      builder: (dialogContext) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Container(
+          width: dialogWidth,
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.8,
+          ),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              if (order['productImage'] != null &&
-                  order['productImage'].toString().isNotEmpty)
-                Center(
-                  child: Image.network(order['productImage'],
-                      width: 120, height: 100, fit: BoxFit.cover),
+              // Header
+              Container(
+                padding: EdgeInsets.all(screenWidth < 480 ? 16 : 20),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1A3D7C),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(16),
+                    topRight: Radius.circular(16),
+                  ),
                 ),
-              const SizedBox(height: 10),
-              _orderDetailRow('Product Name', order['productName']),
-              _orderDetailRow('Total Amount', '₱${((double.tryParse(order['productPrice'].toString().replaceAll('₱', '').replaceAll(',', '')) ?? 0.0) * (order['quantity'] ?? 1)).toStringAsFixed(2)}'),
-              _orderDetailRow('Quantity', order['quantity']),
-              _orderDetailRow('Buyer',
-                  '${order['firstName'] ?? ''} ${order['lastName'] ?? ''}'),
-              _orderDetailRow('Address', order['address']),
-              _orderDetailRow('Municipality', order['municipality']),
-              _orderDetailRow('Province', order['province']),
-              _orderDetailRow('Order Status', order['status'] ?? 'Pending'),
-              _orderDetailRow(
-                  'Order Date',
-                  order['createdAt'] != null &&
-                          order['createdAt'] is Timestamp
-                      ? DateFormat('MMM d, y – hh:mm a')
-                          .format((order['createdAt'] as Timestamp).toDate())
-                      : ''),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.shopping_cart,
+                      color: Colors.white,
+                      size: screenWidth < 480 ? 20 : 24,
+                    ),
+                    SizedBox(width: screenWidth < 480 ? 8 : 12),
+                    Expanded(
+                      child: Text(
+                        'Order Details',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: _getResponsiveFontSize(screenWidth, baseSize: 18.0),
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              
+              // Content
+              Flexible(
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.all(screenWidth < 480 ? 16 : 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (order['productImage'] != null &&
+                          order['productImage'].toString().isNotEmpty)
+                        Center(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.grey.shade300),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.network(
+                                order['productImage'],
+                                width: screenWidth < 480 ? 100 : 120,
+                                height: screenWidth < 480 ? 80 : 100,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                          ),
+                        ),
+                      SizedBox(height: screenWidth < 480 ? 12 : 16),
+                      _orderDetailRow('Product Name', order['productName']),
+                      _orderDetailRow('Total Amount', '₱${((double.tryParse(order['productPrice'].toString().replaceAll('₱', '').replaceAll(',', '')) ?? 0.0) * (order['quantity'] ?? 1)).toStringAsFixed(2)}'),
+                      _orderDetailRow('Quantity', order['quantity']),
+                      _orderDetailRow('Buyer',
+                          '${order['firstName'] ?? ''} ${order['lastName'] ?? ''}'),
+                      _orderDetailRow('Address', order['address']),
+                      _orderDetailRow('Municipality', order['municipality']),
+                      _orderDetailRow('Province', order['province']),
+                      _orderDetailRow('Order Status', order['status'] ?? 'Pending'),
+                      _orderDetailRow(
+                          'Order Date',
+                          order['createdAt'] != null &&
+                                  order['createdAt'] is Timestamp
+                              ? DateFormat('MMM d, y – hh:mm a')
+                                  .format((order['createdAt'] as Timestamp).toDate())
+                              : ''),
+                    ],
+                  ),
+                ),
+              ),
+              
+              // Buttons
+              Container(
+                padding: EdgeInsets.all(screenWidth < 480 ? 12 : 16),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  borderRadius: const BorderRadius.only(
+                    bottomLeft: Radius.circular(16),
+                    bottomRight: Radius.circular(16),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Container(
+                        height: buttonHeight,
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.pop(dialogContext),
+                          style: OutlinedButton.styleFrom(
+                            side: BorderSide(color: Colors.grey.shade400),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: Text(
+                            'Close',
+                            style: TextStyle(
+                              fontSize: buttonFontSize,
+                              color: Colors.grey.shade700,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: screenWidth < 480 ? 8 : 12),
+                    Expanded(
+                      child: Container(
+                        height: buttonHeight,
+                        child: ElevatedButton(
+                          onPressed: () async {
+                            final messenger = ScaffoldMessenger.of(context);
+                            Navigator.pop(dialogContext);
+                            await _updateOrderStatus(
+                              buyerId: correctBuyerId,
+                              orderId: orderId,
+                              newStatus: 'Accepted',
+                              sellerId: sellerId,
+                              context: context,
+                            );
+                            await _firestore
+                                .collection('users')
+                                .doc(sellerId)
+                                .collection('seller_orders')
+                                .doc(orderId)
+                                .update({'status': 'Accepted'});
+                            await _firestore.collection('accept_cancel_notifications').add({
+                              'userId': correctBuyerId,
+                              'orderId': orderId,
+                              'type': 'order_accepted',
+                              'message':
+                                  'Your order has been accepted and is ready to deliver.',
+                              'createdAt': FieldValue.serverTimestamp(),
+                            });
+                            if (!mounted) return;
+                            messenger.showSnackBar(const SnackBar(
+                                content: Text('Order accepted and buyer notified.')));
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: Text(
+                            'Accept',
+                            style: TextStyle(
+                              fontSize: buttonFontSize,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: screenWidth < 480 ? 8 : 12),
+                    Expanded(
+                      child: Container(
+                        height: buttonHeight,
+                        child: ElevatedButton(
+                          onPressed: () async {
+                            final messenger = ScaffoldMessenger.of(context);
+                            Navigator.pop(dialogContext);
+                            await _updateOrderStatus(
+                              buyerId: correctBuyerId,
+                              orderId: orderId,
+                              newStatus: 'Cancelled',
+                              sellerId: sellerId,
+                              context: context,
+                            );
+                            await _firestore
+                                .collection('users')
+                                .doc(sellerId)
+                                .collection('seller_orders')
+                                .doc(orderId)
+                                .update({'status': 'Cancelled'});
+                            await _firestore.collection('accept_cancel_notifications').add({
+                              'userId': correctBuyerId,
+                              'orderId': orderId,
+                              'type': 'order_cancelled',
+                              'message': 'Your order has been cancelled by the seller.',
+                              'createdAt': FieldValue.serverTimestamp(),
+                            });
+                            if (!mounted) return;
+                            messenger.showSnackBar(const SnackBar(
+                                content: Text('Order cancelled and buyer notified.')));
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: Text(
+                            'Cancel',
+                            style: TextStyle(
+                              fontSize: buttonFontSize,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Close'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final messenger = ScaffoldMessenger.of(context);
-              Navigator.pop(dialogContext);
-              await _updateOrderStatus(
-                buyerId: correctBuyerId,
-                orderId: orderId,
-                newStatus: 'Accepted',
-                sellerId: sellerId,
-                context: context,
-              );
-              await _firestore
-                  .collection('users')
-                  .doc(sellerId)
-                  .collection('seller_orders')
-                  .doc(orderId)
-                  .update({'status': 'Accepted'});
-              await _firestore.collection('accept_cancel_notifications').add({
-                'userId': correctBuyerId,
-                'orderId': orderId,
-                'type': 'order_accepted',
-                'message':
-                    'Your order has been accepted and is ready to deliver.',
-                'createdAt': FieldValue.serverTimestamp(),
-              });
-              if (!mounted) return;
-              messenger.showSnackBar(const SnackBar(
-                  content: Text('Order accepted and buyer notified.')));
-            },
-            child:
-                const Text('Accept', style: TextStyle(color: Colors.white)),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final messenger = ScaffoldMessenger.of(context);
-              Navigator.pop(dialogContext);
-              await _updateOrderStatus(
-                buyerId: correctBuyerId,
-                orderId: orderId,
-                newStatus: 'Cancelled',
-                sellerId: sellerId,
-                context: context,
-              );
-              await _firestore
-                  .collection('users')
-                  .doc(sellerId)
-                  .collection('seller_orders')
-                  .doc(orderId)
-                  .update({'status': 'Cancelled'});
-              await _firestore.collection('accept_cancel_notifications').add({
-                'userId': correctBuyerId,
-                'orderId': orderId,
-                'type': 'order_cancelled',
-                'message': 'Your order has been cancelled by the seller.',
-                'createdAt': FieldValue.serverTimestamp(),
-              });
-              if (!mounted) return;
-              messenger.showSnackBar(const SnackBar(
-                  content: Text('Order cancelled and buyer notified.')));
-            },
-            child:
-                const Text('Cancel', style: TextStyle(color: Colors.white)),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-          ),
-        ],
       ),
     );
   }
@@ -971,6 +1234,12 @@ class _NotificationScreenState extends State<NotificationScreen> {
   void _showMarkReadyDialog(BuildContext context, String orderId,
       String? buyerId, String? sellerId) async {
     if (buyerId == null || sellerId == null) return;
+    
+    final screenWidth = MediaQuery.of(context).size.width;
+    final buttonHeight = _getResponsiveButtonHeight(screenWidth);
+    final buttonFontSize = _getResponsiveFontSize(screenWidth, baseSize: 14.0);
+    final dialogWidth = screenWidth < 480 ? screenWidth * 0.9 : screenWidth < 768 ? 400.0 : 500.0;
+    
     DocumentSnapshot? orderDoc;
     try {
       orderDoc = await _firestore
@@ -1005,77 +1274,191 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
     showDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Mark Order as Ready?'),
-        content: SingleChildScrollView(
+      builder: (dialogContext) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Container(
+          width: dialogWidth,
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.8,
+          ),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              if (order['productImage'] != null &&
-                  order['productImage'].toString().isNotEmpty)
-                Center(
-                  child: Image.network(order['productImage'],
-                      width: 120, height: 100, fit: BoxFit.cover),
+              // Header
+              Container(
+                padding: EdgeInsets.all(screenWidth < 480 ? 16 : 20),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1A3D7C),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(16),
+                    topRight: Radius.circular(16),
+                  ),
                 ),
-              const SizedBox(height: 10),
-              _orderDetailRow('Product Name', order['productName']),
-              _orderDetailRow('Total Amount', '₱${((double.tryParse(order['productPrice'].toString().replaceAll('₱', '').replaceAll(',', '')) ?? 0.0) * (order['quantity'] ?? 1)).toStringAsFixed(2)}'),
-              _orderDetailRow('Quantity', order['quantity']),
-              _orderDetailRow('Seller', order['sellerName']),
-              _orderDetailRow('Seller Contact', order['sellerContact']),
-              _orderDetailRow('Customer',
-                  '${order['firstName'] ?? ''} ${order['lastName'] ?? ''}'),
-              _orderDetailRow('Address', order['address']),
-              _orderDetailRow('Municipality', order['municipality']),
-              _orderDetailRow('Province', order['province']),
-              _orderDetailRow('Order Status', order['status'] ?? 'Pending'),
-              _orderDetailRow(
-                  'Order Date',
-                  order['createdAt'] != null && order['createdAt'] is Timestamp
-                      ? DateFormat('MMM d, y – hh:mm a')
-                          .format((order['createdAt'] as Timestamp).toDate())
-                      : ''),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.check_circle,
+                      color: Colors.white,
+                      size: screenWidth < 480 ? 20 : 24,
+                    ),
+                    SizedBox(width: screenWidth < 480 ? 8 : 12),
+                    Expanded(
+                      child: Text(
+                        'Mark Order as Ready?',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: _getResponsiveFontSize(screenWidth, baseSize: 18.0),
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              
+              // Content
+              Flexible(
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.all(screenWidth < 480 ? 16 : 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (order['productImage'] != null &&
+                          order['productImage'].toString().isNotEmpty)
+                        Center(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.grey.shade300),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.network(
+                                order['productImage'],
+                                width: screenWidth < 480 ? 100 : 120,
+                                height: screenWidth < 480 ? 80 : 100,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                          ),
+                        ),
+                      SizedBox(height: screenWidth < 480 ? 12 : 16),
+                      _orderDetailRow('Product Name', order['productName']),
+                      _orderDetailRow('Total Amount', '₱${((double.tryParse(order['productPrice'].toString().replaceAll('₱', '').replaceAll(',', '')) ?? 0.0) * (order['quantity'] ?? 1)).toStringAsFixed(2)}'),
+                      _orderDetailRow('Quantity', order['quantity']),
+                      _orderDetailRow('Seller', order['sellerName']),
+                      _orderDetailRow('Seller Contact', order['sellerContact']),
+                      _orderDetailRow('Customer',
+                          '${order['firstName'] ?? ''} ${order['lastName'] ?? ''}'),
+                      _orderDetailRow('Address', order['address']),
+                      _orderDetailRow('Municipality', order['municipality']),
+                      _orderDetailRow('Province', order['province']),
+                      _orderDetailRow('Order Status', order['status'] ?? 'Pending'),
+                      _orderDetailRow(
+                          'Order Date',
+                          order['createdAt'] != null && order['createdAt'] is Timestamp
+                              ? DateFormat('MMM d, y – hh:mm a')
+                                  .format((order['createdAt'] as Timestamp).toDate())
+                              : ''),
+                    ],
+                  ),
+                ),
+              ),
+              
+              // Buttons
+              Container(
+                padding: EdgeInsets.all(screenWidth < 480 ? 12 : 16),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  borderRadius: const BorderRadius.only(
+                    bottomLeft: Radius.circular(16),
+                    bottomRight: Radius.circular(16),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Container(
+                        height: buttonHeight,
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.pop(dialogContext),
+                          style: OutlinedButton.styleFrom(
+                            side: BorderSide(color: Colors.grey.shade400),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: Text(
+                            'Close',
+                            style: TextStyle(
+                              fontSize: buttonFontSize,
+                              color: Colors.grey.shade700,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: screenWidth < 480 ? 8 : 12),
+                    Expanded(
+                      flex: 2,
+                      child: Container(
+                        height: buttonHeight,
+                        child: ElevatedButton(
+                          onPressed: () async {
+                            final messenger = ScaffoldMessenger.of(context);
+                            Navigator.pop(dialogContext);
+                            await _firestore
+                                .collection('users')
+                                .doc(buyerId)
+                                .collection('orders')
+                                .doc(orderId)
+                                .update({'status': 'Ready to Deliver'});
+                            await _firestore
+                                .collection('users')
+                                .doc(sellerId)
+                                .collection('seller_orders')
+                                .doc(orderId)
+                                .update({'status': 'Ready to Deliver'});
+
+                            await _firestore.collection('accept_cancel_notifications').add({
+                              'userId': buyerId,
+                              'orderId': orderId,
+                              'type': 'order_ready',
+                              'message': 'Your order for "$productName" is ready to deliver!',
+                              'createdAt': FieldValue.serverTimestamp(),
+                            });
+
+                            if (!mounted) return;
+                            messenger.showSnackBar(const SnackBar(
+                                content: Text('Order marked as ready and buyer notified.')));
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: Text(
+                            'Mark as Ready',
+                            style: TextStyle(
+                              fontSize: buttonFontSize,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Close'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final messenger = ScaffoldMessenger.of(context);
-              Navigator.pop(dialogContext);
-              await _firestore
-                  .collection('users')
-                  .doc(buyerId)
-                  .collection('orders')
-                  .doc(orderId)
-                  .update({'status': 'Ready to Deliver'});
-              await _firestore
-                  .collection('users')
-                  .doc(sellerId)
-                  .collection('seller_orders')
-                  .doc(orderId)
-                  .update({'status': 'Ready to Deliver'});
-
-              await _firestore.collection('accept_cancel_notifications').add({
-                'userId': buyerId,
-                'orderId': orderId,
-                'type': 'order_ready',
-                'message': 'Your order for "$productName" is ready to deliver!',
-                'createdAt': FieldValue.serverTimestamp(),
-              });
-
-              if (!mounted) return;
-              messenger.showSnackBar(const SnackBar(
-                  content: Text('Order marked as ready and buyer notified.')));
-            },
-            child: const Text('Mark as Ready to Deliver'),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
-          ),
-        ],
       ),
     );
   }

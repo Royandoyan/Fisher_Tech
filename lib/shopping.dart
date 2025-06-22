@@ -824,8 +824,8 @@ class _ShoppingScreenState extends State<ShoppingScreen>
               Column(
                 children: [
                   isMine
-                      ? SizedBox(
-                          width: screenWidth < 480 ? 80 : 100,
+                      ? Container(
+                          width: screenWidth < 480 ? 100 : 120,
                           height: buttonHeight,
                           child: ElevatedButton(
                             onPressed: () async {
@@ -853,16 +853,22 @@ class _ShoppingScreenState extends State<ShoppingScreen>
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.red,
                               foregroundColor: Colors.white,
-                              minimumSize: Size(screenWidth < 480 ? 80 : 100, buttonHeight),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(6),
                               ),
                             ),
-                            child: Text("Remove", style: TextStyle(fontSize: buttonFontSize)),
+                            child: Text(
+                              "Remove", 
+                              style: TextStyle(
+                                fontSize: buttonFontSize,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
                           ),
                         )
-                      : SizedBox(
-                          width: screenWidth < 480 ? 90 : 110,
+                      : Container(
+                          width: screenWidth < 480 ? 120 : 140,
                           height: buttonHeight,
                           child: ElevatedButton(
                             onPressed: () => _addToCart(
@@ -877,7 +883,6 @@ class _ShoppingScreenState extends State<ShoppingScreen>
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFF3A4A6C),
                               foregroundColor: Colors.white,
-                              minimumSize: Size(screenWidth < 480 ? 90 : 110, buttonHeight),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(6),
                               ),
@@ -889,8 +894,6 @@ class _ShoppingScreenState extends State<ShoppingScreen>
                                 fontWeight: FontWeight.w500,
                               ),
                               textAlign: TextAlign.center,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ),
