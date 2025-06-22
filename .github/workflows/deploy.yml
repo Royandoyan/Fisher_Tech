@@ -15,12 +15,12 @@ jobs:
       - name: Install Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.19.6' # ← change if you're using another version
+          flutter-version: '3.22.0' # ✅ Use a newer version that supports Dart 3.5.3
 
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Build Flutter Web
+      - name: Build Flutter web
         run: flutter build web
 
       - name: Deploy to GitHub Pages
