@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'homed.dart';
-import 'Selection_screen.dart'; // <-- Import this!
+import 'selection_screen.dart'; // <-- Import this!
 
 class LoginScreen extends StatefulWidget {
   final String userType;

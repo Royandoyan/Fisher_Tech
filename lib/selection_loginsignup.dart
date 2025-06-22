@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'login.dart';
 import 'signup.dart';
-import 'Selection_screen.dart'; // <-- Make sure to import this
+import 'selection_screen.dart'; // <-- Make sure to import this
 
 class SelectionLoginSignup extends StatelessWidget {
   final String userType;
