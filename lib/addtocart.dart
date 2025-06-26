@@ -24,6 +24,7 @@ class _AddToCartState extends State<AddToCart> {
   final TextEditingController _firstNameController = TextEditingController();
   final TextEditingController _middleNameController = TextEditingController();
   final TextEditingController _lastNameController = TextEditingController();
+  final TextEditingController _numberController = TextEditingController();
   final TextEditingController _addressController = TextEditingController();
   final TextEditingController _municipalityController = TextEditingController();
   String? _selectedProvince;
@@ -86,6 +87,7 @@ class _AddToCartState extends State<AddToCart> {
     _firstNameController.dispose();
     _middleNameController.dispose();
     _lastNameController.dispose();
+    _numberController.dispose();
     _addressController.dispose();
     _municipalityController.dispose();
     super.dispose();
@@ -181,6 +183,7 @@ class _AddToCartState extends State<AddToCart> {
         'firstName': _firstNameController.text,
         'middleName': _middleNameController.text,
         'lastName': _lastNameController.text,
+        'cpNumber': _numberController.text,
         'address': _addressController.text,
         'municipality': _municipalityController.text,
         'province': _selectedProvince,
@@ -280,6 +283,7 @@ class _AddToCartState extends State<AddToCart> {
             'productImage': product['image'],
             'quantity': product['quantity'],
             'totalAmount': totalAmount,
+            'buyerCpNumber': _numberController.text,
           };
           print('📝 Seller notification data: $sellerNotificationData');
           
@@ -292,6 +296,19 @@ class _AddToCartState extends State<AddToCart> {
           _hasError = true;
           _errorMessage = 'Failed to create seller notification: $e';
         }
+
+        await _sendOrderMessageToSeller(
+          sellerId: product['sellerId'],
+          sellerName: product['sellerName'] ?? '',
+          productName: product['name'] ?? '',
+          productPrice: product['price'] ?? '',
+          quantity: product['quantity'] ?? 1,
+          customerName: '${_firstNameController.text} ${_lastNameController.text}',
+          address: _addressController.text,
+          municipality: _municipalityController.text,
+          province: _selectedProvince ?? '',
+          cpNumber: _numberController.text,
+        );
       } else {
         print('⚠️ Seller ID is empty, skipping seller order and notifications');
       }
@@ -392,6 +409,7 @@ class _AddToCartState extends State<AddToCart> {
                       String savedFirstName = '';
                       String savedMiddleName = '';
                       String savedLastName = '';
+                      String savedCpNumber = '';
                       String savedProvince = '';
                       String savedMunicipality = '';
                       String savedAddress = '';
@@ -401,6 +419,7 @@ class _AddToCartState extends State<AddToCart> {
                         savedFirstName = latestOrder['firstName'] ?? '';
                         savedMiddleName = latestOrder['middleName'] ?? '';
                         savedLastName = latestOrder['lastName'] ?? '';
+                        savedCpNumber = latestOrder['cpNumber'] ?? '';
                         savedProvince = latestOrder['province'] ?? '';
                         savedMunicipality = latestOrder['municipality'] ?? '';
                         savedAddress = latestOrder['address'] ?? '';
@@ -449,6 +468,7 @@ class _AddToCartState extends State<AddToCart> {
                                           _firstNameController.text = savedFirstName;
                                           _middleNameController.text = savedMiddleName;
                                           _lastNameController.text = savedLastName;
+                                          _numberController.text = savedCpNumber;
                                           _selectedProvince = savedProvince;
                                           _municipalityController.text = savedMunicipality;
                                           _addressController.text = savedAddress;
@@ -466,7 +486,7 @@ class _AddToCartState extends State<AddToCart> {
                                         ),
                                         const SizedBox(height: 4),
                                         Text(
-                                          '$savedFirstName $savedMiddleName $savedLastName, $savedProvince, $savedMunicipality, $savedAddress',
+                                          '$savedFirstName $savedMiddleName $savedLastName, $savedCpNumber, $savedProvince, $savedMunicipality, $savedAddress',
                                           style: const TextStyle(fontSize: 12, color: Colors.grey),
                                         ),
                                       ],
@@ -542,6 +562,7 @@ class _AddToCartState extends State<AddToCart> {
                         final latestOrder = savedInfoSnapshot.data!.docs.first.data() as Map<String, dynamic>;
                         final savedFirstName = latestOrder['firstName'] ?? '';
                         final savedLastName = latestOrder['lastName'] ?? '';
+                        final savedCpNumber = latestOrder['cpNumber'] ?? '';
                         hasSavedInfo = savedFirstName.isNotEmpty && savedLastName.isNotEmpty;
                       }
                       
@@ -569,6 +590,15 @@ class _AddToCartState extends State<AddToCart> {
                               controller: _lastNameController,
                               decoration: const InputDecoration(
                                 labelText: 'LAST NAME',
+                                border: OutlineInputBorder(),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            TextField(
+                              controller: _numberController,
+                              keyboardType: TextInputType.phone,
+                              decoration: const InputDecoration(
+                                labelText: 'CONTACT NUMBER',
                                 border: OutlineInputBorder(),
                               ),
                             ),
@@ -614,46 +644,8 @@ class _AddToCartState extends State<AddToCart> {
                           ],
                         );
                       } else {
-                        // Hidden form fields for saved information (to ensure controllers are populated)
-                        return Column(
-                          children: [
-                            SizedBox(
-                              height: 0,
-                              child: TextField(
-                                controller: _firstNameController,
-                                enabled: false,
-                              ),
-                            ),
-                            SizedBox(
-                              height: 0,
-                              child: TextField(
-                                controller: _middleNameController,
-                                enabled: false,
-                              ),
-                            ),
-                            SizedBox(
-                              height: 0,
-                              child: TextField(
-                                controller: _lastNameController,
-                                enabled: false,
-                              ),
-                            ),
-                            SizedBox(
-                              height: 0,
-                              child: TextField(
-                                controller: _addressController,
-                                enabled: false,
-                              ),
-                            ),
-                            SizedBox(
-                              height: 0,
-                              child: TextField(
-                                controller: _municipalityController,
-                                enabled: false,
-                              ),
-                            ),
-                          ],
-                        );
+                        // Do not render any hidden or zero-height fields when using saved info
+                        return const SizedBox.shrink();
                       }
                     },
                   ),
@@ -784,6 +776,7 @@ class _AddToCartState extends State<AddToCart> {
                                 'firstName': _firstNameController.text,
                                 'middleName': _middleNameController.text,
                                 'lastName': _lastNameController.text,
+                                'cpNumber': _numberController.text,
                                 'address': _addressController.text,
                                 'municipality': _municipalityController.text,
                                 'province': _selectedProvince,
@@ -867,6 +860,7 @@ class _AddToCartState extends State<AddToCart> {
                                     'productImage': item['image'],
                                     'quantity': item['quantity'],
                                     'totalAmount': totalAmount,
+                                    'buyerCpNumber': _numberController.text,
                                   };
                                   print('📝 Seller notification data: $sellerNotificationData');
                                   
@@ -879,6 +873,19 @@ class _AddToCartState extends State<AddToCart> {
                                   _hasError = true;
                                   _errorMessage = 'Failed to create seller notification: $e';
                                 }
+
+                                await _sendOrderMessageToSeller(
+                                  sellerId: sellerId,
+                                  sellerName: sellerName,
+                                  productName: item['name'] ?? '',
+                                  productPrice: item['price'] ?? '',
+                                  quantity: item['quantity'] ?? 1,
+                                  customerName: '${_firstNameController.text} ${_lastNameController.text}',
+                                  address: _addressController.text,
+                                  municipality: _municipalityController.text,
+                                  province: _selectedProvince ?? '',
+                                  cpNumber: _numberController.text,
+                                );
                               } else {
                                 print('⚠️ Seller ID is empty, skipping seller order and notifications');
                               }
@@ -892,7 +899,16 @@ class _AddToCartState extends State<AddToCart> {
                                   .get();
 
                               for (var doc in cartItems.docs) {
-                                await doc.reference.delete();
+                                final data = doc.data() as Map<String, dynamic>;
+                                final cartDocId = data['cartDocId'];
+                                if (cartDocId != null) {
+                                  await FirebaseFirestore.instance
+                                      .collection('users')
+                                      .doc(user.uid)
+                                      .collection('cart')
+                                      .doc(cartDocId)
+                                      .delete();
+                                }
                               }
                             }
 
@@ -1322,6 +1338,7 @@ class _AddToCartState extends State<AddToCart> {
                   String savedFirstName = '';
                   String savedMiddleName = '';
                   String savedLastName = '';
+                  String savedCpNumber = '';
                   String savedProvince = '';
                   String savedMunicipality = '';
                   String savedAddress = '';
@@ -1331,6 +1348,7 @@ class _AddToCartState extends State<AddToCart> {
                     savedFirstName = latestOrder['firstName'] ?? '';
                     savedMiddleName = latestOrder['middleName'] ?? '';
                     savedLastName = latestOrder['lastName'] ?? '';
+                    savedCpNumber = latestOrder['cpNumber'] ?? '';
                     savedProvince = latestOrder['province'] ?? '';
                     savedMunicipality = latestOrder['municipality'] ?? '';
                     savedAddress = latestOrder['address'] ?? '';
@@ -1368,6 +1386,7 @@ class _AddToCartState extends State<AddToCart> {
                                       _firstNameController.text = savedFirstName;
                                       _middleNameController.text = savedMiddleName;
                                       _lastNameController.text = savedLastName;
+                                      _numberController.text = savedCpNumber;
                                       _selectedProvince = savedProvince;
                                       _municipalityController.text = savedMunicipality;
                                       _addressController.text = savedAddress;
@@ -1385,7 +1404,7 @@ class _AddToCartState extends State<AddToCart> {
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
-                                      '$savedFirstName $savedMiddleName $savedLastName, $savedProvince, $savedMunicipality, $savedAddress',
+                                      '$savedFirstName $savedMiddleName $savedLastName, $savedCpNumber, $savedProvince, $savedMunicipality, $savedAddress',
                                       style: const TextStyle(fontSize: 12, color: Colors.grey),
                                     ),
                                   ],
@@ -1461,6 +1480,7 @@ class _AddToCartState extends State<AddToCart> {
                     final latestOrder = savedInfoSnapshot.data!.docs.first.data() as Map<String, dynamic>;
                     final savedFirstName = latestOrder['firstName'] ?? '';
                     final savedLastName = latestOrder['lastName'] ?? '';
+                    final savedCpNumber = latestOrder['cpNumber'] ?? '';
                     hasSavedInfo = savedFirstName.isNotEmpty && savedLastName.isNotEmpty;
                   }
                   
@@ -1488,6 +1508,15 @@ class _AddToCartState extends State<AddToCart> {
                           controller: _lastNameController,
                           decoration: const InputDecoration(
                             labelText: 'LAST NAME',
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        TextField(
+                          controller: _numberController,
+                          keyboardType: TextInputType.phone,
+                          decoration: const InputDecoration(
+                            labelText: 'CONTACT NUMBER',
                             border: OutlineInputBorder(),
                           ),
                         ),
@@ -1533,46 +1562,8 @@ class _AddToCartState extends State<AddToCart> {
                       ],
                     );
                   } else {
-                    // Hidden form fields for saved information (to ensure controllers are populated)
-                    return Column(
-                      children: [
-                        SizedBox(
-                          height: 0,
-                          child: TextField(
-                            controller: _firstNameController,
-                            enabled: false,
-                          ),
-                        ),
-                        SizedBox(
-                          height: 0,
-                          child: TextField(
-                            controller: _middleNameController,
-                            enabled: false,
-                          ),
-                        ),
-                        SizedBox(
-                          height: 0,
-                          child: TextField(
-                            controller: _lastNameController,
-                            enabled: false,
-                          ),
-                        ),
-                        SizedBox(
-                          height: 0,
-                          child: TextField(
-                            controller: _addressController,
-                            enabled: false,
-                          ),
-                        ),
-                        SizedBox(
-                          height: 0,
-                          child: TextField(
-                            controller: _municipalityController,
-                            enabled: false,
-                          ),
-                        ),
-                      ],
-                    );
+                    // Do not render any hidden or zero-height fields when using saved info
+                    return const SizedBox.shrink();
                   }
                 },
               ),
@@ -1851,7 +1842,7 @@ class _AddToCartState extends State<AddToCart> {
         
         print('Is ordered: $isOrdered, Status: $orderStatus');
         
-        // Auto-remove accepted products from cart
+        // Auto-remove accepted products from cart ONLY if cartDocId matches
         if (isOrdered && orderStatus == 'Accepted') {
           print('Auto-removing accepted product from cart');
           WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -2443,5 +2434,43 @@ class _AddToCartState extends State<AddToCart> {
         ],
       ),
     );
+  }
+
+  Future<void> _sendOrderMessageToSeller({
+    required String sellerId,
+    required String sellerName,
+    required String productName,
+    required dynamic productPrice,
+    required int quantity,
+    required String customerName,
+    required String address,
+    required String municipality,
+    required String province,
+    String? cpNumber,
+  }) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    final chatParticipants = [user.uid, sellerId]..sort();
+    final chatId = chatParticipants.join('_');
+    final orderSummary =
+        'Order placed: $quantity x $productName for ₱$productPrice.\nContact: ${cpNumber ?? ''}. Shipping to: $customerName, $address, $municipality, $province.';
+    print('[OrderChat] Creating chat: $chatId with participants: $chatParticipants (type: \${chatParticipants.runtimeType})');
+    // Create or update chat doc
+    await FirebaseFirestore.instance.collection('messages').doc(chatId).set({
+      'participants': chatParticipants,
+      'lastMessage': orderSummary,
+      'lastMessageTime': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true)).then((_) => print('[OrderChat] Chat doc set for $chatId')).catchError((e) => print('[OrderChat] Error setting chat doc: $e'));
+    // Add message
+    await FirebaseFirestore.instance
+        .collection('messages')
+        .doc(chatId)
+        .collection('chats')
+        .add({
+      'senderId': user.uid,
+      'receiverId': sellerId,
+      'text': orderSummary,
+      'timestamp': FieldValue.serverTimestamp(),
+    }).then((doc) => print('[OrderChat] Message sent to $chatId: \${doc.id}')).catchError((e) => print('[OrderChat] Error sending message: $e'));
   }
 }

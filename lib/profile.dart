@@ -6,10 +6,17 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:rxdart/rxdart.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'developer.dart';
 import 'homed.dart';
 import 'product.dart';
+import 'messages.dart';
+import 'shopping.dart';
+import 'addtocart.dart';
+import 'notification.dart';
+import 'selection_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   final String userType;
@@ -25,6 +32,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool isLoading = true;
   String? userType;
   String? profileImageUrl;
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   // Responsive design helpers
   double _getResponsiveFontSize(double width, {double baseSize = 16.0}) {
@@ -238,6 +246,341 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return '$firstName ${middleName.isNotEmpty ? '$middleName ' : ''}$lastName'.trim();
   }
 
+  Widget _buildLogoItem({required String image, required double logoSize, required VoidCallback onTap}) {
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        padding: EdgeInsets.all(logoSize * 0.15),
+        child: Image.asset(
+          image,
+          height: logoSize,
+          width: logoSize * 1.4,
+          fit: BoxFit.contain,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDrawer() {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final drawerWidth = screenWidth < 480 ? 180.0 : 200.0;
+    final logoSize = screenWidth < 480 ? 60.0 : 70.0;
+    final spacing = screenWidth < 480 ? 20.0 : 30.0;
+    final buttonHeight = _getResponsiveButtonHeight(screenWidth);
+    final buttonFontSize = _getResponsiveFontSize(screenWidth, baseSize: 14.0);
+    
+    return Drawer(
+      width: drawerWidth,
+      child: Column(
+        children: [
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _buildLogoItem(
+                  image: 'assets/images/citycatbalogan.png',
+                  logoSize: logoSize,
+                  onTap: () async {
+                    Navigator.pop(context);
+                    const url =
+                        'https://www.facebook.com/CatbaloganPulis?mibextid=qi2Omg&rdid=bVIUFXyKihSa2wsN&share_url=https%3A%2F%2Fwww.facebook.com%2Fshare%2F1Nhzw2XvMq%2F%3Fmibextid%3Dqi2Omg#; ';
+                    if (await canLaunchUrl(Uri.parse(url))) {
+                      await launchUrl(Uri.parse(url),
+                          mode: LaunchMode.externalApplication);
+                    }
+                  },
+                ),
+                SizedBox(height: spacing),
+                _buildLogoItem(
+                  image: 'assets/images/coastguard.png',
+                  logoSize: logoSize,
+                  onTap: () async {
+                    Navigator.pop(context);
+                    const url =
+                        'https://www.facebook.com/profile.php?id=100064678504235';
+                    if (await canLaunchUrl(Uri.parse(url))) {
+                      await launchUrl(Uri.parse(url),
+                          mode: LaunchMode.externalApplication);
+                    }
+                  },
+                ),
+                SizedBox(height: spacing),
+                _buildLogoItem(
+                  image: 'assets/images/map.png',
+                  logoSize: logoSize,
+                  onTap: () async {
+                    Navigator.pop(context);
+                    const url =
+                        'https://www.google.com/maps/place/City+of+Catbalogan,+Samar/@11.8002446,124.8212436,11z/data=!3m1!4b1!4m6!3m5!1s0x330834d7864d55d7:0xcbc9fd0999445956!8m2!3d11.8568348!4d124.8844867!16s%2Fm%2F02p_dgf?entry=ttu&g_ep=EgoyMDI1MDYxMS4wIKXMDSoASAFQAw%3D%3D';
+                    if (await canLaunchUrl(Uri.parse(url))) {
+                      await launchUrl(Uri.parse(url),
+                          mode: LaunchMode.externalApplication);
+                    }
+                  },
+                ),
+                SizedBox(height: spacing),
+                _buildLogoItem(
+                  image: 'assets/images/firestation.png',
+                  logoSize: logoSize,
+                  onTap: () async {
+                    Navigator.pop(context);
+                    const url =
+                        'https://www.facebook.com/profile.php?id=100064703287688';
+                    if (await canLaunchUrl(Uri.parse(url))) {
+                      await launchUrl(Uri.parse(url),
+                          mode: LaunchMode.externalApplication);
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: EdgeInsets.all(_getResponsivePadding(screenWidth)),
+            child: ElevatedButton.icon(
+              icon: Icon(Icons.logout, size: _getResponsiveIconSize(screenWidth), color: Colors.white),
+              label: Text(
+                'Logout',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: buttonFontSize,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                minimumSize: Size(double.infinity, buttonHeight),
+              ),
+              onPressed: _signOut,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  AppBar _buildAppBar(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final logoHeight = screenWidth < 480 ? 32.0 : 40.0;
+    final toolbarHeight = screenWidth < 480 ? 60.0 : 70.0;
+    final user = FirebaseAuth.instance.currentUser;
+    return AppBar(
+      backgroundColor: Colors.white,
+      iconTheme: const IconThemeData(color: Colors.black),
+      elevation: 0,
+      toolbarHeight: toolbarHeight,
+      leading: IconButton(
+        icon: Icon(Icons.menu, size: _getResponsiveIconSize(screenWidth)),
+        onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+      ),
+      title: Row(
+        children: [
+          GestureDetector(
+            onTap: () {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => HomePage(userType: userType ?? widget.userType),
+                ),
+              );
+            },
+            child: Image.asset(
+              'assets/images/logo.png',
+              height: logoHeight,
+            ),
+          ),
+          const Spacer(),
+          IconButton(
+            icon: Icon(Icons.shopping_bag_outlined, color: Colors.black, size: _getResponsiveIconSize(screenWidth)),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ShoppingScreen(userType: userType ?? widget.userType),
+                ),
+              );
+            },
+          ),
+          IconButton(
+            icon: Icon(Icons.shopping_cart_outlined, color: Colors.black, size: _getResponsiveIconSize(screenWidth)),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => AddToCart(userType: userType ?? widget.userType),
+                ),
+              );
+            },
+          ),
+          IconButton(
+            icon: Icon(Icons.notifications_none, color: Colors.black, size: _getResponsiveIconSize(screenWidth)),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => NotificationScreen(userType: userType ?? widget.userType),
+                ),
+              );
+            },
+          ),
+          IconButton(
+            icon: Icon(Icons.person_outline, color: Colors.black, size: _getResponsiveIconSize(screenWidth)),
+            onPressed: () {}, // Already on profile
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _signOut() async {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final fontSize = _getResponsiveFontSize(screenWidth, baseSize: 16.0);
+    final buttonFontSize = _getResponsiveFontSize(screenWidth, baseSize: 14.0);
+    final dialogWidth = (screenWidth < 480 ? screenWidth * 0.75 : screenWidth < 768 ? 320.0 : 380.0);
+    final shouldLogout = await showDialog<bool>(
+      context: context,
+      barrierDismissible: true,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Container(
+            width: dialogWidth,
+            constraints: BoxConstraints(
+              maxHeight: screenHeight * 0.4,
+              minHeight: 160,
+            ),
+            padding: EdgeInsets.all(screenWidth < 480 ? 16 : 20),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    padding: EdgeInsets.all(screenWidth < 480 ? 12 : 16),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withOpacity(0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.logout,
+                      size: screenWidth < 480 ? 24 : 32,
+                      color: Colors.red,
+                    ),
+                  ),
+                  SizedBox(height: screenWidth < 480 ? 12 : 16),
+                  Text(
+                    'Confirm Logout',
+                    style: TextStyle(
+                      fontSize: fontSize + 1,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: screenWidth < 480 ? 6 : 8),
+                  Text(
+                    'Are you sure you want to logout?',
+                    style: TextStyle(
+                      fontSize: fontSize - 2,
+                      color: Colors.grey[600],
+                      height: 1.3,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: screenWidth < 480 ? 20 : 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      Expanded(
+                        child: Container(
+                          height: screenWidth < 480 ? 40 : 44,
+                          margin: EdgeInsets.only(right: screenWidth < 480 ? 6 : 8),
+                          child: OutlinedButton(
+                            onPressed: () => Navigator.of(context).pop(false),
+                            style: OutlinedButton.styleFrom(
+                              side: BorderSide(color: Colors.grey[400]!),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                            child: Text(
+                              'Cancel',
+                              style: TextStyle(
+                                fontSize: buttonFontSize - 1,
+                                color: Colors.grey[700],
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: Container(
+                          height: screenWidth < 480 ? 40 : 44,
+                          margin: EdgeInsets.only(left: screenWidth < 480 ? 6 : 8),
+                          child: ElevatedButton(
+                            onPressed: () => Navigator.of(context).pop(true),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red,
+                              foregroundColor: Colors.white,
+                              elevation: 2,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                            child: Text(
+                              'Logout',
+                              style: TextStyle(
+                                fontSize: buttonFontSize - 1,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+    if (shouldLogout != true) return;
+    try {
+      await FirebaseAuth.instance.signOut();
+      if (mounted) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => SelectionScreen()),
+          (Route<dynamic> route) => false,
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error signing out: ${e.toString()}')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
@@ -257,6 +600,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     if (userData == null) {
       return Scaffold(
+        appBar: _buildAppBar(context),
+        drawer: _buildDrawer(),
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -277,28 +622,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
 
     return Scaffold(
+      key: _scaffoldKey,
+      appBar: _buildAppBar(context),
+      drawer: _buildDrawer(),
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF3A4A6C),
-        foregroundColor: Colors.white,
-        title: Text(
-          'Profile',
-          style: TextStyle(fontSize: fontSize + 6, color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Colors.white, size: iconSize),
-          onPressed: () {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (context) => HomePage(userType: userType ?? widget.userType),
-              ),
-            );
-          },
-        ),
-        elevation: 0,
-        toolbarHeight: screenWidth < 480 ? 60.0 : 70.0,
-      ),
       body: Column(
         children: [
           SizedBox(height: spacing * 0.8),
@@ -330,16 +657,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Text(
             _getFullName(),
             style: TextStyle(
-              fontSize: fontSize + 2,
+              fontSize: fontSize + 8,
               fontWeight: FontWeight.bold,
+              color: Colors.black87,
             ),
           ),
           SizedBox(height: 4),
           Text(
             '${userData?['email'] ?? 'No email'} | ${userData?['cpNumber'] ?? 'No cpNumber'}',
             style: TextStyle(
-              fontSize: fontSize - 2,
-              color: Colors.grey,
+              fontSize: fontSize + 2,
+              color: Colors.blueGrey[700],
+              fontWeight: FontWeight.w600,
             ),
             textAlign: TextAlign.center,
           ),
@@ -390,6 +719,71 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         context,
                         MaterialPageRoute(
                             builder: (context) => const DeveloperScreen()),
+                      );
+                    },
+                  ),
+                  ListTile(
+                    leading: Icon(Icons.message, size: iconSize),
+                    title: Text(
+                      'Messages',
+                      style: TextStyle(fontSize: fontSize),
+                    ),
+                    trailing: StreamBuilder<QuerySnapshot>(
+                      stream: FirebaseFirestore.instance
+                          .collection('messages')
+                          .where('participants', arrayContains: FirebaseAuth.instance.currentUser?.uid)
+                          .snapshots(),
+                      builder: (context, snapshot) {
+                        if (!snapshot.hasData) return const SizedBox.shrink();
+                        final chats = snapshot.data!.docs;
+                        final user = FirebaseAuth.instance.currentUser;
+                        if (user == null || chats.isEmpty) return const SizedBox.shrink();
+                        // Listen to all chats' subcollections as streams
+                        return StreamBuilder<List<QuerySnapshot>>(
+                          stream: CombineLatestStream.list(
+                            chats.map((chat) =>
+                              FirebaseFirestore.instance
+                                .collection('messages')
+                                .doc(chat.id)
+                                .collection('chats')
+                                .snapshots()
+                            ).toList(),
+                          ),
+                          builder: (context, chatSnaps) {
+                            if (!chatSnaps.hasData) return const SizedBox.shrink();
+                            int totalUnread = 0;
+                            for (final chatSnap in chatSnaps.data!) {
+                              for (final doc in chatSnap.docs) {
+                                final data = doc.data() as Map<String, dynamic>;
+                                final readBy = (data['readBy'] is List)
+                                    ? List<String>.from(data['readBy'])
+                                    : <String>[];
+                                if (!readBy.contains(user.uid)) totalUnread++;
+                              }
+                            }
+                            return totalUnread > 0
+                                ? Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: Colors.red,
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                    child: Text(
+                                      '$totalUnread',
+                                      style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                                    ),
+                                  )
+                                : const SizedBox.shrink();
+                          },
+                        );
+                      },
+                    ),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => MessagesScreen(userType: userType ?? widget.userType),
+                        ),
                       );
                     },
                   ),

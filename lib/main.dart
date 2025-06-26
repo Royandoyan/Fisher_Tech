@@ -8,7 +8,6 @@ import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_android/webview_flutter_android.dart';
 // For iOS
 import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
-import 'dart:html' as html;
 
 void main() async {
   try {
@@ -53,11 +52,8 @@ void main() async {
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: () {
-                  // Reload the page
-                  if (kIsWeb) {
-                    // For web, reload the page
-                    html.window.location.reload();
-                  }
+                  // Simple retry - just show the error message
+                  debugPrint('Fisher Tech App - Retry button pressed');
                 },
                 child: const Text('Retry'),
               ),
