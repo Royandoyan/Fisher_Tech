@@ -25,6 +25,56 @@ class _NotificationScreenState extends State<NotificationScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
+  // Light ocean gradient to highlight the logo
+  static const LinearGradient oceanGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xFFe0f7fa), // Light aqua
+      Color(0xFFb3e5fc), // Pale blue
+      Color(0xFF81d4fa), // Soft blue
+      Color(0xFFb2ebf2), // Light teal
+      Color(0xFFe1f5fe), // Very light blue
+    ],
+  );
+
+  static const LinearGradient cardGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xFFF8FAFC), // Light sea foam
+      Color(0xFFE0F2FE), // Very light blue
+      Color(0xFFF0F9FF), // Ice blue
+    ],
+  );
+
+  static const LinearGradient buttonGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xFF1E40AF), // Deep blue
+      Color(0xFF3B82F6), // Ocean blue
+    ],
+  );
+
+  static const LinearGradient accentGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xFF0F766E), // Teal
+      Color(0xFF14B8A6), // Sea green
+    ],
+  );
+
+  static const LinearGradient notificationGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xFFE0F2FE), // Light blue
+      Color(0xFFF0F9FF), // Ice blue
+    ],
+  );
+
   // Responsive design helpers
   double _getResponsiveFontSize(double width, {double baseSize = 16.0}) {
     if (width < 480) return baseSize - 2;
@@ -396,8 +446,218 @@ class _NotificationScreenState extends State<NotificationScreen> {
     return Scaffold(
       key: _scaffoldKey,
       drawer: _buildDrawer(),
-      appBar: _buildAppBar(context, user),
-      body: _buildNotificationBody(user),
+      body: Container(
+        decoration: const BoxDecoration(color: Colors.white),
+        child: Column(
+          children: [
+            // Custom AppBar with white background
+            Container(
+              decoration: const BoxDecoration(color: Colors.white),
+              child: SafeArea(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.menu, color: Color(0xFF1976D2)),
+                        onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+                      ),
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => HomePage(userType: widget.userType),
+                            ),
+                          );
+                        },
+                        child: Image.asset(
+                          'assets/images/logo1.jpg',
+                          height: 40,
+                        ),
+                      ),
+                      const Spacer(),
+                      IconButton(
+                        icon: const Icon(Icons.shopping_bag_outlined, color: Color(0xFF1976D2)),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  ShoppingScreen(userType: widget.userType),
+                            ),
+                          );
+                        },
+                      ),
+                      StreamBuilder<List<QuerySnapshot>>(
+                        stream: CombineLatestStream.list([
+                          FirebaseFirestore.instance
+                              .collection('users')
+                              .doc(user.uid)
+                              .collection('cart')
+                              .snapshots(),
+                          FirebaseFirestore.instance
+                              .collection('users')
+                              .doc(user.uid)
+                              .collection('orders')
+                              .where('status', isNotEqualTo: 'Cancelled')
+                              .snapshots(),
+                        ]),
+                        builder: (context, snapshot) {
+                          int cartCount = 0;
+                          if (snapshot.hasData) {
+                            final cartItems = snapshot.data![0].docs;
+                            final orders = snapshot.data![1].docs;
+                            
+                            // Filter out cart items that have been ordered
+                            for (var cartDoc in cartItems) {
+                              final cartData = cartDoc.data() as Map<String, dynamic>;
+                              final cartDocId = cartDoc.id;
+                              final productName = cartData['name'];
+                              final sellerId = cartData['sellerId'];
+                              
+                              // Check if this cart item has been ordered
+                              bool isOrdered = false;
+                              for (var orderDoc in orders) {
+                                final orderData = orderDoc.data() as Map<String, dynamic>;
+                                final orderCartDocId = orderData['cartDocId'];
+                                final orderProductName = orderData['productName'];
+                                final orderSellerId = orderData['sellerId'];
+                                final orderStatus = orderData['status'];
+                                
+                                // Check if this order matches the cart item
+                                // Only check for exact cartDocId match - don't filter based on previous orders
+                                if (orderCartDocId == cartDocId) {
+                                  if (orderStatus == 'Accepted') {
+                                    isOrdered = true;
+                                    break;
+                                  }
+                                }
+                              }
+                              
+                              if (!isOrdered) {
+                                cartCount++;
+                              }
+                            }
+                          }
+                          return Stack(
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.shopping_cart_outlined, color: Color(0xFF1976D2)),
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          AddToCart(userType: widget.userType),
+                                    ),
+                                  );
+                                },
+                              ),
+                              if (cartCount > 0)
+                                Positioned(
+                                  right: 8,
+                                  top: 8,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(2),
+                                    decoration: BoxDecoration(
+                                      color: Colors.red,
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    constraints: const BoxConstraints(
+                                      minWidth: 16,
+                                      minHeight: 16,
+                                    ),
+                                    child: Text(
+                                      '$cartCount',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 10,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          );
+                        },
+                      ),
+                      StreamBuilder<QuerySnapshot>(
+                        stream: FirebaseFirestore.instance
+                            .collection('notifications')
+                            .where('userId', isEqualTo: user.uid)
+                            .where('isRead', isEqualTo: false)
+                            .snapshots(),
+                        builder: (context, snapshot) {
+                          int notificationCount = snapshot.data?.docs.length ?? 0;
+                          return Stack(
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.notifications_none, color: Color(0xFF1976D2)),
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          NotificationScreen(userType: widget.userType),
+                                    ),
+                                  );
+                                },
+                              ),
+                              if (notificationCount > 0)
+                                Positioned(
+                                  right: 8,
+                                  top: 8,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(2),
+                                    decoration: BoxDecoration(
+                                      color: Colors.red,
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    constraints: const BoxConstraints(
+                                      minWidth: 16,
+                                      minHeight: 16,
+                                    ),
+                                    child: Text(
+                                      '$notificationCount',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 10,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          );
+                        },
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.person_outline, color: Color(0xFF1976D2)),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  ProfileScreen(userType: widget.userType),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            Expanded(
+              child: Container(
+                decoration: const BoxDecoration(gradient: oceanGradient),
+                child: _buildNotificationBody(user),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -483,21 +743,38 @@ class _NotificationScreenState extends State<NotificationScreen> {
   Widget _buildNotificationLayout(BuildContext context, List notifications) {
     if (notifications.isEmpty) {
       return Center(
+        child: Container(
+          margin: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(32),
+          decoration: BoxDecoration(
+            gradient: cardGradient,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 15,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.notifications_none,
-              size: 80,
-              color: Colors.grey.shade400,
-            ),
-            const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  gradient: oceanGradient,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.notifications_none, size: 60, color: Colors.white),
+              ),
+              const SizedBox(height: 18),
             Text(
               'No notifications yet',
               style: TextStyle(
                 fontSize: 18,
-                color: Colors.grey.shade600,
-                fontWeight: FontWeight.w500,
+                  color: Colors.black87,
+                fontWeight: FontWeight.w600,
               ),
             ),
             const SizedBox(height: 8),
@@ -505,19 +782,17 @@ class _NotificationScreenState extends State<NotificationScreen> {
               'You\'ll see your notifications here',
               style: TextStyle(
                 fontSize: 14,
-                color: Colors.grey.shade500,
+                  color: Colors.black54,
               ),
+                textAlign: TextAlign.center,
             ),
           ],
+          ),
         ),
       );
     }
     
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-      ),
-      child: ListView.builder(
+    return ListView.builder(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         itemCount: notifications.length,
         itemBuilder: (context, index) {
@@ -528,6 +803,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
           final timeText = timestamp != null
               ? _formatTimestamp(timestamp)
               : 'Recently';
+        final isRead = data['isRead'] ?? false;
 
           final type = data['type'] ?? '';
           final orderId = data['orderId'];
@@ -537,24 +813,24 @@ class _NotificationScreenState extends State<NotificationScreen> {
           return Container(
             margin: const EdgeInsets.only(bottom: 12),
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
+            gradient: isRead ? cardGradient : notificationGradient,
+            borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: Colors.grey.shade300,
-                width: 1,
+              color: isRead ? Colors.grey.shade300 : Colors.blue.shade200,
+              width: 1.2,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
+                color: Colors.black.withOpacity(isRead ? 0.05 : 0.08),
+                blurRadius: isRead ? 8 : 12,
+                offset: const Offset(0, 4),
                 ),
               ],
             ),
             child: Material(
               color: Colors.transparent,
               child: InkWell(
-                borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(16),
                 onTap: () async {
                   print('🔔 Notification tapped - Type: $type, OrderId: $orderId');
                   print('🔔 Current user: ${_auth.currentUser?.uid}');
@@ -599,78 +875,73 @@ class _NotificationScreenState extends State<NotificationScreen> {
                       print('🔔 Buyer order_ready notification clicked - showing order details');
                       _showOrderDetailsDialog(context, orderId, buyerId: userId);
                     }
-                    // For seller mark ready functionality
-                    else if (type == 'order_accepted' &&
-                        userId == _auth.currentUser?.uid &&
-                        sellerId != _auth.currentUser?.uid) {
-                      print('🔔 Seller mark ready notification clicked');
-                      _showMarkReadyDialog(context, orderId, userId, sellerId);
-                    } 
-                    // Default case
-                    else {
-                      print('🔔 Default notification clicked - showing order details');
-                      _showOrderDetailsDialog(context, orderId);
-                    }
-                  } else {
-                    print('🔔 Notification not clickable - Type: $type, OrderId: $orderId');
                   }
                 },
                 child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                    // Notification icon with gradient
                       Container(
-                        margin: const EdgeInsets.only(right: 16),
-                        padding: const EdgeInsets.all(10),
+                      padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF1A3D7C),
+                        gradient: oceanGradient,
                           shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.notifications,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.15),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Icon(
+                        _getNotificationIcon(type),
                           color: Colors.white,
-                          size: 20,
+                          size: 24,
                         ),
                       ),
+                    const SizedBox(width: 12),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
                               message,
-                              style: const TextStyle(
-                                fontSize: 15,
-                                color: Colors.black87,
-                                fontWeight: FontWeight.w600,
-                              ),
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: isRead ? FontWeight.w500 : FontWeight.w600,
+                              color: Colors.black87,
                             ),
-                            const SizedBox(height: 6),
-                            Row(
-                              children: [
-                                Icon(
-                                  Icons.access_time,
-                                  size: 14,
-                                  color: Colors.grey.shade500,
-                                ),
-                                const SizedBox(width: 4),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 4),
                                 Text(
                                   timeText,
                                   style: TextStyle(
-                                    fontSize: 13,
-                                    color: Colors.grey.shade600,
-                                    fontWeight: FontWeight.w500,
+                              fontSize: 13,
+                              color: Colors.black54,
                                   ),
                                 ),
                               ],
                             ),
+                    ),
+                    if (!isRead)
+                      Container(
+                        width: 12,
+                        height: 12,
+                        decoration: BoxDecoration(
+                          gradient: oceanGradient,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.2),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
                           ],
                         ),
-                      ),
-                      Icon(
-                        Icons.chevron_right,
-                        color: Colors.grey.shade400,
-                        size: 20,
                       ),
                     ],
                   ),
@@ -679,8 +950,23 @@ class _NotificationScreenState extends State<NotificationScreen> {
             ),
           );
         },
-      ),
     );
+  }
+
+  IconData _getNotificationIcon(String type) {
+    switch (type) {
+      case 'order_placed':
+      case 'new_order':
+        return Icons.shopping_cart;
+      case 'order_accepted':
+        return Icons.check_circle;
+      case 'order_cancelled':
+        return Icons.cancel;
+      case 'order_ready':
+        return Icons.local_shipping;
+      default:
+        return Icons.notifications;
+    }
   }
 
   Future<void> _updateOrderStatus({
@@ -736,7 +1022,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
     }
   }
 
-  void _showSellerOrderActionDialog(BuildContext context, String orderId, Map<String, dynamic> notificationData) {
+  void _showSellerOrderActionDialog(BuildContext context, String orderId, Map<String, dynamic> notificationData) async {
     final screenWidth = MediaQuery.of(context).size.width;
     final buttonHeight = _getResponsiveButtonHeight(screenWidth);
     final buttonFontSize = _getResponsiveFontSize(screenWidth, baseSize: 14.0);
@@ -754,6 +1040,32 @@ class _NotificationScreenState extends State<NotificationScreen> {
     final totalAmount = notificationData['totalAmount'] ?? 0.0;
     final buyerId = notificationData['buyerId'] ?? '';
     final sellerId = notificationData['sellerId'] ?? '';
+
+    // Check current order status
+    String currentStatus = 'Pending';
+    try {
+      final orderDoc = await _firestore
+          .collection('users')
+          .doc(buyerId)
+          .collection('orders')
+          .doc(orderId)
+          .get();
+      
+      if (orderDoc.exists) {
+        final orderData = orderDoc.data() as Map<String, dynamic>;
+        currentStatus = orderData['status'] ?? 'Pending';
+      }
+    } catch (e) {
+      print('Error checking order status: $e');
+    }
+
+    // Determine if action buttons should be shown
+    final bool canTakeAction = currentStatus == 'Pending';
+    final String statusMessage = currentStatus == 'Accepted' 
+        ? 'Order has been accepted' 
+        : currentStatus == 'Cancelled' 
+            ? 'Order has been cancelled' 
+            : '';
 
     showDialog(
       context: context,
@@ -773,7 +1085,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
               Container(
                 padding: EdgeInsets.all(screenWidth < 480 ? 16 : 20),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF1A3D7C),
+                  gradient: buttonGradient,
                   borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(16),
                     topRight: Radius.circular(16),
@@ -789,7 +1101,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                     SizedBox(width: screenWidth < 480 ? 8 : 12),
                     Expanded(
                       child: Text(
-                        'New Order Details',
+                        'Order Details',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: _getResponsiveFontSize(screenWidth, baseSize: 18.0),
@@ -803,6 +1115,10 @@ class _NotificationScreenState extends State<NotificationScreen> {
               
               // Content
               Flexible(
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: cardGradient,
+                  ),
                 child: SingleChildScrollView(
                   padding: EdgeInsets.all(screenWidth < 480 ? 16 : 20),
                   child: Column(
@@ -814,6 +1130,14 @@ class _NotificationScreenState extends State<NotificationScreen> {
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(8),
                               border: Border.all(color: Colors.grey.shade300),
+                                color: Colors.white,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.05),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
                             ),
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(8),
@@ -827,6 +1151,22 @@ class _NotificationScreenState extends State<NotificationScreen> {
                           ),
                         ),
                       SizedBox(height: screenWidth < 480 ? 12 : 16),
+                        Container(
+                          padding: EdgeInsets.all(screenWidth < 480 ? 12 : 16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(8),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.05),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
                       _orderDetailRow('Product Name', productName),
                       _orderDetailRow('Total Amount', '₱${totalAmount.toStringAsFixed(2)}'),
                       _orderDetailRow('Quantity', quantity.toString()),
@@ -835,12 +1175,48 @@ class _NotificationScreenState extends State<NotificationScreen> {
                       _orderDetailRow('Buyer Address', buyerAddress),
                       _orderDetailRow('Buyer Municipality', buyerMunicipality),
                       _orderDetailRow('Buyer Province', buyerProvince),
+                      _orderDetailRow('Order Status', currentStatus),
                       _orderDetailRow('Order Date', notificationData['createdAt'] != null && 
                           notificationData['createdAt'] is Timestamp
                           ? DateFormat('MMM d, y – hh:mm a')
                               .format((notificationData['createdAt'] as Timestamp).toDate())
                           : ''),
                     ],
+                          ),
+                        ),
+                      if (!canTakeAction && statusMessage.isNotEmpty)
+                        Container(
+                          margin: EdgeInsets.only(top: screenWidth < 480 ? 12 : 16),
+                          padding: EdgeInsets.all(screenWidth < 480 ? 12 : 16),
+                          decoration: BoxDecoration(
+                            color: currentStatus == 'Accepted' ? Colors.green.shade50 : Colors.orange.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: currentStatus == 'Accepted' ? Colors.green.shade200 : Colors.orange.shade200,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                currentStatus == 'Accepted' ? Icons.check_circle : Icons.cancel,
+                                color: currentStatus == 'Accepted' ? Colors.green : Colors.orange,
+                                size: 20,
+                              ),
+                              SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  statusMessage,
+                                  style: TextStyle(
+                                    color: currentStatus == 'Accepted' ? Colors.green.shade700 : Colors.orange.shade700,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -849,7 +1225,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
               Container(
                 padding: EdgeInsets.all(screenWidth < 480 ? 12 : 16),
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade50,
+                  gradient: accentGradient,
                   borderRadius: const BorderRadius.only(
                     bottomLeft: Radius.circular(16),
                     bottomRight: Radius.circular(16),
@@ -860,10 +1236,12 @@ class _NotificationScreenState extends State<NotificationScreen> {
                     Expanded(
                       child: Container(
                         height: buttonHeight,
-                        child: OutlinedButton(
+                        child: ElevatedButton(
                           onPressed: () => Navigator.pop(dialogContext),
-                          style: OutlinedButton.styleFrom(
-                            side: BorderSide(color: Colors.grey.shade400),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: const Color(0xFF374151),
+                            elevation: 2,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8),
                             ),
@@ -872,65 +1250,67 @@ class _NotificationScreenState extends State<NotificationScreen> {
                             'Close',
                             style: TextStyle(
                               fontSize: buttonFontSize,
-                              color: Colors.grey.shade700,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
                         ),
                       ),
                     ),
-                    SizedBox(width: screenWidth < 480 ? 8 : 12),
-                    Expanded(
-                      child: Container(
-                        height: buttonHeight,
-                        child: ElevatedButton(
-                          onPressed: () async {
-                            Navigator.pop(dialogContext);
-                            await _acceptOrder(context, orderId, buyerId, sellerId, productName);
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
+                    if (canTakeAction) ...[
+                      SizedBox(width: screenWidth < 480 ? 8 : 12),
+                      Expanded(
+                        child: Container(
+                          height: buttonHeight,
+                          child: ElevatedButton(
+                            onPressed: () async {
+                              Navigator.pop(dialogContext);
+                              await _acceptOrder(context, orderId, buyerId, sellerId, productName);
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
                             ),
-                          ),
-                          child: Text(
-                            'Accept',
-                            style: TextStyle(
-                              fontSize: buttonFontSize,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    SizedBox(width: screenWidth < 480 ? 8 : 12),
-                    Expanded(
-                      child: Container(
-                        height: buttonHeight,
-                        child: ElevatedButton(
-                          onPressed: () async {
-                            Navigator.pop(dialogContext);
-                            await _cancelOrder(context, orderId, buyerId, sellerId, productName);
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.red,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                          child: Text(
-                            'Cancel',
-                            style: TextStyle(
-                              fontSize: buttonFontSize,
-                              fontWeight: FontWeight.w600,
+                            child: Text(
+                              'Accept',
+                              style: TextStyle(
+                                fontSize: buttonFontSize,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
                         ),
                       ),
-                    ),
+                      SizedBox(width: screenWidth < 480 ? 8 : 12),
+                      Expanded(
+                        child: Container(
+                          height: buttonHeight,
+                          child: ElevatedButton(
+                            onPressed: () async {
+                              Navigator.pop(dialogContext);
+                              await _cancelOrder(context, orderId, buyerId, sellerId, productName);
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF6B7280),
+                              foregroundColor: Colors.white,
+                              elevation: 2,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            child: Text(
+                              'Cancel',
+                              style: TextStyle(
+                                fontSize: buttonFontSize,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -994,6 +1374,15 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
     // Get the real buyer's user ID from the order document
     final correctBuyerId = order['buyerId'] ?? order['userId'] ?? buyerId;
+    
+    // Check current order status
+    final String currentStatus = order['status'] ?? 'Pending';
+    final bool canTakeAction = currentStatus == 'Pending';
+    final String statusMessage = currentStatus == 'Accepted' 
+        ? 'Order has been accepted' 
+        : currentStatus == 'Cancelled' 
+            ? 'Order has been cancelled' 
+            : '';
 
     showDialog(
       context: context,
@@ -1013,7 +1402,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
               Container(
                 padding: EdgeInsets.all(screenWidth < 480 ? 16 : 20),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF1A3D7C),
+                  gradient: buttonGradient,
                   borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(16),
                     topRight: Radius.circular(16),
@@ -1068,23 +1457,72 @@ class _NotificationScreenState extends State<NotificationScreen> {
                           ),
                         ),
                       SizedBox(height: screenWidth < 480 ? 12 : 16),
-                      _orderDetailRow('Product Name', order['productName']),
-                      _orderDetailRow('Total Amount', '₱${((double.tryParse(order['productPrice'].toString().replaceAll('₱', '').replaceAll(',', '')) ?? 0.0) * (order['quantity'] ?? 1)).toStringAsFixed(2)}'),
-                      _orderDetailRow('Quantity', order['quantity']),
-                      _orderDetailRow('Buyer',
-                          '${order['firstName'] ?? ''} ${order['lastName'] ?? ''}'),
-                      _orderDetailRow('Contact Number', order['cpNumber'] ?? ''),
-                      _orderDetailRow('Address', order['address']),
-                      _orderDetailRow('Municipality', order['municipality']),
-                      _orderDetailRow('Province', order['province']),
-                      _orderDetailRow('Order Status', order['status'] ?? 'Pending'),
-                      _orderDetailRow(
-                          'Order Date',
-                          order['createdAt'] != null &&
-                                  order['createdAt'] is Timestamp
-                              ? DateFormat('MMM d, y – hh:mm a')
-                                  .format((order['createdAt'] as Timestamp).toDate())
-                              : ''),
+                      Container(
+                        padding: EdgeInsets.all(screenWidth < 480 ? 12 : 16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(8),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _orderDetailRow('Product Name', order['productName']),
+                            _orderDetailRow('Total Amount', '₱${((double.tryParse(order['productPrice'].toString().replaceAll('₱', '').replaceAll(',', '')) ?? 0.0) * (order['quantity'] ?? 1)).toStringAsFixed(2)}'),
+                            _orderDetailRow('Quantity', order['quantity']),
+                            _orderDetailRow('Buyer',
+                                '${order['firstName'] ?? ''} ${order['lastName'] ?? ''}'),
+                            _orderDetailRow('Contact Number', order['cpNumber'] ?? ''),
+                            _orderDetailRow('Address', order['address']),
+                            _orderDetailRow('Municipality', order['municipality']),
+                            _orderDetailRow('Province', order['province']),
+                            _orderDetailRow('Order Status', currentStatus),
+                            _orderDetailRow(
+                                'Order Date',
+                                order['createdAt'] != null && order['createdAt'] is Timestamp
+                                    ? DateFormat('MMM d, y – hh:mm a')
+                                        .format((order['createdAt'] as Timestamp).toDate())
+                                    : ''),
+                          ],
+                        ),
+                      ),
+                      if (!canTakeAction && statusMessage.isNotEmpty)
+                        Container(
+                          margin: EdgeInsets.only(top: screenWidth < 480 ? 12 : 16),
+                          padding: EdgeInsets.all(screenWidth < 480 ? 12 : 16),
+                          decoration: BoxDecoration(
+                            color: currentStatus == 'Accepted' ? Colors.green.shade50 : Colors.orange.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: currentStatus == 'Accepted' ? Colors.green.shade200 : Colors.orange.shade200,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                currentStatus == 'Accepted' ? Icons.check_circle : Icons.cancel,
+                                color: currentStatus == 'Accepted' ? Colors.green : Colors.orange,
+                                size: 20,
+                              ),
+                              SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  statusMessage,
+                                  style: TextStyle(
+                                    color: currentStatus == 'Accepted' ? Colors.green.shade700 : Colors.orange.shade700,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                     ],
                   ),
                 ),
@@ -1105,10 +1543,12 @@ class _NotificationScreenState extends State<NotificationScreen> {
                     Expanded(
                       child: Container(
                         height: buttonHeight,
-                        child: OutlinedButton(
+                        child: ElevatedButton(
                           onPressed: () => Navigator.pop(dialogContext),
-                          style: OutlinedButton.styleFrom(
-                            side: BorderSide(color: Colors.grey.shade400),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: const Color(0xFF374151),
+                            elevation: 2,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8),
                             ),
@@ -1117,112 +1557,114 @@ class _NotificationScreenState extends State<NotificationScreen> {
                             'Close',
                             style: TextStyle(
                               fontSize: buttonFontSize,
-                              color: Colors.grey.shade700,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
                         ),
                       ),
                     ),
-                    SizedBox(width: screenWidth < 480 ? 8 : 12),
-                    Expanded(
-                      child: Container(
-                        height: buttonHeight,
-                        child: ElevatedButton(
-                          onPressed: () async {
-                            final messenger = ScaffoldMessenger.of(context);
-                            Navigator.pop(dialogContext);
-                            await _updateOrderStatus(
-                              buyerId: correctBuyerId,
-                              orderId: orderId,
-                              newStatus: 'Accepted',
-                              sellerId: sellerId,
-                              context: context,
-                            );
-                            await _firestore
-                                .collection('users')
-                                .doc(sellerId)
-                                .collection('seller_orders')
-                                .doc(orderId)
-                                .update({'status': 'Accepted'});
-                            await _firestore.collection('accept_cancel_notifications').add({
-                              'userId': correctBuyerId,
-                              'orderId': orderId,
-                              'type': 'order_accepted',
-                              'message':
-                                  'Your order has been accepted and is ready to deliver.',
-                              'createdAt': FieldValue.serverTimestamp(),
-                            });
-                            if (!mounted) return;
-                            messenger.showSnackBar(const SnackBar(
-                                content: Text('Order accepted and buyer notified.')));
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
+                    if (canTakeAction) ...[
+                      SizedBox(width: screenWidth < 480 ? 8 : 12),
+                      Expanded(
+                        child: Container(
+                          height: buttonHeight,
+                          child: ElevatedButton(
+                            onPressed: () async {
+                              final messenger = ScaffoldMessenger.of(context);
+                              Navigator.pop(dialogContext);
+                              await _updateOrderStatus(
+                                buyerId: correctBuyerId,
+                                orderId: orderId,
+                                newStatus: 'Accepted',
+                                sellerId: sellerId,
+                                context: context,
+                              );
+                              await _firestore
+                                  .collection('users')
+                                  .doc(sellerId)
+                                  .collection('seller_orders')
+                                  .doc(orderId)
+                                  .update({'status': 'Accepted'});
+                              await _firestore.collection('accept_cancel_notifications').add({
+                                'userId': correctBuyerId,
+                                'orderId': orderId,
+                                'type': 'order_accepted',
+                                'message':
+                                    'Your order has been accepted and is ready to deliver.',
+                                'createdAt': FieldValue.serverTimestamp(),
+                              });
+                              if (!mounted) return;
+                              messenger.showSnackBar(const SnackBar(
+                                  content: Text('Order accepted and buyer notified.')));
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
                             ),
-                          ),
-                          child: Text(
-                            'Accept',
-                            style: TextStyle(
-                              fontSize: buttonFontSize,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    SizedBox(width: screenWidth < 480 ? 8 : 12),
-                    Expanded(
-                      child: Container(
-                        height: buttonHeight,
-                        child: ElevatedButton(
-                          onPressed: () async {
-                            final messenger = ScaffoldMessenger.of(context);
-                            Navigator.pop(dialogContext);
-                            await _updateOrderStatus(
-                              buyerId: correctBuyerId,
-                              orderId: orderId,
-                              newStatus: 'Cancelled',
-                              sellerId: sellerId,
-                              context: context,
-                            );
-                            await _firestore
-                                .collection('users')
-                                .doc(sellerId)
-                                .collection('seller_orders')
-                                .doc(orderId)
-                                .update({'status': 'Cancelled'});
-                            await _firestore.collection('accept_cancel_notifications').add({
-                              'userId': correctBuyerId,
-                              'orderId': orderId,
-                              'type': 'order_cancelled',
-                              'message': 'Your order has been cancelled by the seller.',
-                              'createdAt': FieldValue.serverTimestamp(),
-                            });
-                            if (!mounted) return;
-                            messenger.showSnackBar(const SnackBar(
-                                content: Text('Order cancelled and buyer notified.')));
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.red,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                          child: Text(
-                            'Cancel',
-                            style: TextStyle(
-                              fontSize: buttonFontSize,
-                              fontWeight: FontWeight.w600,
+                            child: Text(
+                              'Accept',
+                              style: TextStyle(
+                                fontSize: buttonFontSize,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
                         ),
                       ),
-                    ),
+                      SizedBox(width: screenWidth < 480 ? 8 : 12),
+                      Expanded(
+                        child: Container(
+                          height: buttonHeight,
+                          child: ElevatedButton(
+                            onPressed: () async {
+                              final messenger = ScaffoldMessenger.of(context);
+                              Navigator.pop(dialogContext);
+                              await _updateOrderStatus(
+                                buyerId: correctBuyerId,
+                                orderId: orderId,
+                                newStatus: 'Cancelled',
+                                sellerId: sellerId,
+                                context: context,
+                              );
+                              await _firestore
+                                  .collection('users')
+                                  .doc(sellerId)
+                                  .collection('seller_orders')
+                                  .doc(orderId)
+                                  .update({'status': 'Cancelled'});
+                              await _firestore.collection('accept_cancel_notifications').add({
+                                'userId': correctBuyerId,
+                                'orderId': orderId,
+                                'type': 'order_cancelled',
+                                'message': 'Your order has been cancelled by the seller.',
+                                'createdAt': FieldValue.serverTimestamp(),
+                              });
+                              if (!mounted) return;
+                              messenger.showSnackBar(const SnackBar(
+                                  content: Text('Order cancelled and buyer notified.')));
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF6B7280),
+                              foregroundColor: Colors.white,
+                              elevation: 2,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            child: Text(
+                              'Cancel',
+                              style: TextStyle(
+                                fontSize: buttonFontSize,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -1385,10 +1827,12 @@ class _NotificationScreenState extends State<NotificationScreen> {
                     Expanded(
                       child: Container(
                         height: buttonHeight,
-                        child: OutlinedButton(
+                        child: ElevatedButton(
                           onPressed: () => Navigator.pop(dialogContext),
-                          style: OutlinedButton.styleFrom(
-                            side: BorderSide(color: Colors.grey.shade400),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: const Color(0xFF374151),
+                            elevation: 2,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8),
                             ),
@@ -1397,7 +1841,6 @@ class _NotificationScreenState extends State<NotificationScreen> {
                             'Close',
                             style: TextStyle(
                               fontSize: buttonFontSize,
-                              color: Colors.grey.shade700,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -1533,7 +1976,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
               Container(
                 padding: EdgeInsets.all(screenWidth < 480 ? 16 : 20),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF1A3D7C),
+                  gradient: buttonGradient,
                   borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(16),
                     topRight: Radius.circular(16),
@@ -1587,6 +2030,22 @@ class _NotificationScreenState extends State<NotificationScreen> {
                           ),
                         ),
                       SizedBox(height: screenWidth < 480 ? 12 : 16),
+                      Container(
+                        padding: EdgeInsets.all(screenWidth < 480 ? 12 : 16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(8),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
                       _orderDetailRow('Product Name', order['productName']),
                       _orderDetailRow('Total Amount', '₱${((double.tryParse(order['productPrice'].toString().replaceAll('₱', '').replaceAll(',', '')) ?? 0.0) * (order['quantity'] ?? 1)).toStringAsFixed(2)}'),
                       _orderDetailRow('Quantity', order['quantity']),
@@ -1605,6 +2064,9 @@ class _NotificationScreenState extends State<NotificationScreen> {
                               ? DateFormat('MMM d, y – hh:mm a')
                                   .format((order['createdAt'] as Timestamp).toDate())
                               : ''),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -1624,10 +2086,12 @@ class _NotificationScreenState extends State<NotificationScreen> {
                     Expanded(
                       child: Container(
                         height: buttonHeight,
-                        child: OutlinedButton(
+                        child: ElevatedButton(
                           onPressed: () => Navigator.pop(dialogContext),
-                          style: OutlinedButton.styleFrom(
-                            side: BorderSide(color: Colors.grey.shade400),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: const Color(0xFF374151),
+                            elevation: 2,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8),
                             ),
@@ -1709,7 +2173,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
       iconTheme: const IconThemeData(color: Colors.black),
       elevation: 0,
       leading: IconButton(
-        icon: const Icon(Icons.menu),
+        icon: const Icon(Icons.menu, color: Color(0xFF1976D2)),
         onPressed: () => _scaffoldKey.currentState?.openDrawer(),
       ),
       title: Row(
@@ -1717,20 +2181,20 @@ class _NotificationScreenState extends State<NotificationScreen> {
           GestureDetector(
             onTap: () {
               Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => HomePage(userType: widget.userType),
-                  ));
+                context,
+                MaterialPageRoute(
+                  builder: (context) => HomePage(userType: widget.userType),
+                ),
+              );
             },
             child: Image.asset(
-              'assets/images/logo.png',
+              'assets/images/logo1.jpg',
               height: 40,
             ),
           ),
           const Spacer(),
           IconButton(
-            icon:
-                const Icon(Icons.shopping_bag_outlined, color: Colors.black),
+            icon: const Icon(Icons.shopping_bag_outlined, color: Color(0xFF1976D2)),
             onPressed: () {
               Navigator.push(
                   context,
@@ -1740,19 +2204,62 @@ class _NotificationScreenState extends State<NotificationScreen> {
                   ));
             },
           ),
-          StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance
-                .collection('users')
-                .doc(user.uid)
-                .collection('cart')
-                .snapshots(),
+          StreamBuilder<List<QuerySnapshot>>(
+            stream: CombineLatestStream.list([
+              FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(user.uid)
+                  .collection('cart')
+                  .snapshots(),
+              FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(user.uid)
+                  .collection('orders')
+                  .where('status', isNotEqualTo: 'Cancelled')
+                  .snapshots(),
+            ]),
             builder: (context, snapshot) {
-              int cartCount = snapshot.data?.docs.length ?? 0;
+              int cartCount = 0;
+              if (snapshot.hasData) {
+                final cartItems = snapshot.data![0].docs;
+                final orders = snapshot.data![1].docs;
+                
+                // Filter out cart items that have been ordered
+                for (var cartDoc in cartItems) {
+                  final cartData = cartDoc.data() as Map<String, dynamic>;
+                  final cartDocId = cartDoc.id;
+                  final productName = cartData['name'];
+                  final sellerId = cartData['sellerId'];
+                  
+                  // Check if this cart item has been ordered
+                  bool isOrdered = false;
+                  for (var orderDoc in orders) {
+                    final orderData = orderDoc.data() as Map<String, dynamic>;
+                    final orderCartDocId = orderData['cartDocId'];
+                    final orderProductName = orderData['productName'];
+                    final orderSellerId = orderData['sellerId'];
+                    final orderStatus = orderData['status'];
+                    
+                    // Check if this order matches the cart item
+                    // Only exclude if cartDocId matches exactly, or if it's a direct order (no cartDocId) with same product/seller
+                    if (orderCartDocId == cartDocId || 
+                        (orderCartDocId == null && orderProductName == productName && orderSellerId == sellerId)) {
+                      if (orderStatus == 'Accepted') {
+                        isOrdered = true;
+                        break;
+                      }
+                    }
+                  }
+                  
+                  if (!isOrdered) {
+                    cartCount++;
+                  }
+                }
+              }
               return Stack(
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.shopping_cart_outlined,
-                        color: Colors.black),
+                    icon: const Icon(Icons.shopping_cart_outlined, color: Color(0xFF1976D2)),
                     onPressed: () {
                       Navigator.push(
                           context,
@@ -1801,8 +2308,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
               return Stack(
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.notifications_none,
-                        color: Colors.black),
+                    icon: const Icon(Icons.notifications_none, color: Color(0xFF1976D2)),
                     onPressed: () {
                       Navigator.push(
                           context,
@@ -1841,7 +2347,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
             },
           ),
           IconButton(
-            icon: const Icon(Icons.person_outline, color: Colors.black),
+            icon: const Icon(Icons.person_outline, color: Color(0xFF1976D2)),
             onPressed: () {
               Navigator.push(
                   context,

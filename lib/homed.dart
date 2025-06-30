@@ -64,6 +64,57 @@ class _HomePageState extends State<HomePage> {
   // For video thumbnail cache
   final Map<String, String?> _videoThumbnailCache = {};
 
+  // Light ocean gradient to highlight the logo
+  static const LinearGradient oceanGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xFFe0f7fa), // Light aqua
+      Color(0xFFb3e5fc), // Pale blue
+      Color(0xFF81d4fa), // Soft blue
+      Color(0xFFb2ebf2), // Light teal
+      Color(0xFFe1f5fe), // Very light blue
+    ],
+  );
+
+  static const LinearGradient cardGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xFFF8FAFC), // Light sea foam
+      Color(0xFFE0F2FE), // Very light blue
+      Color(0xFFF0F9FF), // Ice blue
+    ],
+  );
+
+  static const LinearGradient buttonGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xFF1E40AF), // Deep blue
+      Color(0xFF3B82F6), // Ocean blue
+    ],
+  );
+
+  static const LinearGradient accentGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xFF0F766E), // Teal
+      Color(0xFF14B8A6), // Sea green
+    ],
+  );
+
+  static const LinearGradient searchGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xFFF0F9FF), // Ice blue
+      Color(0xFFE0F2FE), // Light blue
+      Color(0xFFF8FAFC), // Sea foam
+    ],
+  );
+
   // Generate video thumbnail
   Future<String?> _generateVideoThumbnail(String videoUrl) async {
     if (_videoThumbnailCache.containsKey(videoUrl)) {
@@ -233,26 +284,140 @@ class _HomePageState extends State<HomePage> {
 
   // Show dialog to input title/purpose then upload
   void _showUploadDialog() {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final fontSize = _getResponsiveFontSize(screenWidth, baseSize: 16.0);
+    final buttonFontSize = _getResponsiveFontSize(screenWidth, baseSize: 14.0);
+    final dialogWidth = screenWidth < 480 ? screenWidth * 0.9 : screenWidth < 768 ? 400.0 : 500.0;
+    
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Upload ${_uploadType == 'file' ? 'Document' : 'Video'}'),
-        content: Column(
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Container(
+          width: dialogWidth,
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.6,
+          ),
+          child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('Selected file: ${_selectedFile?.name ?? ''}'),
-            const SizedBox(height: 10),
+              // Header with gradient
+              Container(
+                padding: EdgeInsets.all(screenWidth < 480 ? 16 : 20),
+                decoration: BoxDecoration(
+                  gradient: buttonGradient,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(16),
+                    topRight: Radius.circular(16),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      _uploadType == 'file' ? Icons.upload_file : Icons.video_library,
+                      color: Colors.white,
+                      size: screenWidth < 480 ? 20 : 24,
+                    ),
+                    SizedBox(width: screenWidth < 480 ? 8 : 12),
+                    Expanded(
+                      child: Text(
+                        'Upload ${_uploadType == 'file' ? 'Document' : 'Video'}',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: fontSize + 2,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              
+              // Content
+              Flexible(
+                child: Container(
+                  padding: EdgeInsets.all(screenWidth < 480 ? 16 : 20),
+                  decoration: BoxDecoration(
+                    gradient: cardGradient,
+                    borderRadius: const BorderRadius.only(
+                      bottomLeft: Radius.circular(16),
+                      bottomRight: Radius.circular(16),
+                    ),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        padding: EdgeInsets.all(screenWidth < 480 ? 12 : 16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.grey.shade300),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.file_present,
+                              color: Colors.blue.shade600,
+                              size: screenWidth < 480 ? 16 : 20,
+                            ),
+                            SizedBox(width: screenWidth < 480 ? 8 : 12),
+                            Expanded(
+                              child: Text(
+                                'Selected file: ${_selectedFile?.name ?? ''}',
+                                style: TextStyle(
+                                  fontSize: fontSize - 2,
+                                  color: Colors.grey.shade700,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      SizedBox(height: screenWidth < 480 ? 16 : 20),
             TextField(
               controller: _titleController,
-              decoration: const InputDecoration(
+                        decoration: InputDecoration(
                 labelText: 'Title / Purpose',
-                border: OutlineInputBorder(),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
+                          labelStyle: TextStyle(
+                            color: Colors.grey.shade600,
+                            fontSize: fontSize - 2,
+                          ),
+                          filled: true,
+                          fillColor: Colors.white,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: Colors.grey.shade300),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: Colors.grey.shade300),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: Colors.blue.shade400, width: 2),
+                          ),
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: screenWidth < 480 ? 12 : 16,
+                            vertical: screenWidth < 480 ? 12 : 16,
+                          ),
+                        ),
+                        style: TextStyle(fontSize: fontSize),
+                      ),
+                      SizedBox(height: screenWidth < 480 ? 20 : 24),
+                      
+                      // Buttons
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Container(
+                              height: screenWidth < 480 ? 40 : 44,
+                              margin: EdgeInsets.only(right: screenWidth < 480 ? 6 : 8),
+                              child: OutlinedButton(
             onPressed: () {
               Navigator.pop(context);
               setState(() {
@@ -261,9 +426,28 @@ class _HomePageState extends State<HomePage> {
                 _uploadType = null;
               });
             },
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
+                                style: OutlinedButton.styleFrom(
+                                  side: BorderSide(color: Colors.grey.shade400),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                                child: Text(
+                                  'Cancel',
+                                  style: TextStyle(
+                                    fontSize: buttonFontSize,
+                                    color: Colors.grey.shade700,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: Container(
+                              height: screenWidth < 480 ? 40 : 44,
+                              margin: EdgeInsets.only(left: screenWidth < 480 ? 6 : 8),
+                              child: ElevatedButton(
             onPressed: () {
               final title = _titleController.text.trim();
               if (title.isEmpty) {
@@ -275,9 +459,33 @@ class _HomePageState extends State<HomePage> {
               Navigator.pop(context);
               _uploadFile(title);
             },
-            child: const Text('Upload'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.blue.shade600,
+                                  foregroundColor: Colors.white,
+                                  elevation: 2,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                                child: Text(
+                                  'Upload',
+                                  style: TextStyle(
+                                    fontSize: buttonFontSize,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -743,25 +951,27 @@ class _HomePageState extends State<HomePage> {
 
     return Scaffold(
       key: _scaffoldKey,
-      backgroundColor: const Color(0xFFF6F8FB),
-      drawer: _buildDrawer(),
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        automaticallyImplyLeading: false,
-        leading: IconButton(
-          icon: const Icon(Icons.menu, color: Colors.black),
+      body: Column(
+        children: [
+          // Custom AppBar with white background
+          Container(
+            decoration: const BoxDecoration(color: Colors.white),
+            child: SafeArea(
+              child: Container(
+                padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: verticalPadding),
+                child: Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.menu, color: Color(0xFF1976D2)),
           onPressed: () => _scaffoldKey.currentState?.openDrawer(),
         ),
-        title: Image.asset(
-          'assets/images/logo.png', 
-          height: screenWidth < 480 ? 32 : 40
-        ),
-        centerTitle: false,
-        toolbarHeight: screenWidth < 480 ? 60 : 70,
-        actions: [
+                    Image.asset(
+                      'assets/images/logo1.jpg', 
+                      height: screenWidth < 480 ? 32 : 40
+                    ),
+                    const Spacer(),
           IconButton(
-            icon: const Icon(Icons.shopping_bag_outlined, color: Colors.black),
+                      icon: const Icon(Icons.shopping_bag_outlined, color: Color(0xFF1976D2)),
             onPressed: () {
               Navigator.push(
                 context,
@@ -773,7 +983,7 @@ class _HomePageState extends State<HomePage> {
             },
           ),
           IconButton(
-            icon: const Icon(Icons.shopping_cart_outlined, color: Colors.black),
+                      icon: const Icon(Icons.shopping_cart_outlined, color: Color(0xFF1976D2)),
             onPressed: () {
               Navigator.push(
                 context,
@@ -784,7 +994,7 @@ class _HomePageState extends State<HomePage> {
             },
           ),
           IconButton(
-            icon: const Icon(Icons.notifications_none, color: Colors.black),
+                      icon: const Icon(Icons.notifications_none, color: Color(0xFF1976D2)),
             onPressed: () {
               Navigator.push(
                 context,
@@ -796,7 +1006,7 @@ class _HomePageState extends State<HomePage> {
             },
           ),
           IconButton(
-            icon: const Icon(Icons.person_outline, color: Colors.black),
+                      icon: const Icon(Icons.person_outline, color: Color(0xFF1976D2)),
             onPressed: () {
               Navigator.push(
                 context,
@@ -810,7 +1020,13 @@ class _HomePageState extends State<HomePage> {
           SizedBox(width: horizontalPadding * 0.5),
         ],
       ),
-      body: SafeArea(
+              ),
+            ),
+          ),
+          Expanded(
+            child: Container(
+              decoration: const BoxDecoration(gradient: oceanGradient),
+              child: SafeArea(
         child: SingleChildScrollView(
           padding: EdgeInsets.symmetric(
             horizontal: horizontalPadding,
@@ -824,14 +1040,14 @@ class _HomePageState extends State<HomePage> {
                 margin: EdgeInsets.symmetric(vertical: verticalPadding),
                 padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
                   decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
+                          gradient: searchGradient,
+                          borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.grey.withOpacity(0.1),
+                              color: Colors.black.withOpacity(0.1),
                       spreadRadius: 1,
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
+                              blurRadius: 8,
+                              offset: const Offset(0, 4),
                     ),
                   ],
                   ),
@@ -875,6 +1091,11 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
       ),
+            ),
+          ),
+        ],
+      ),
+      drawer: _buildDrawer(),
     );
   }
 
@@ -888,15 +1109,21 @@ class _HomePageState extends State<HomePage> {
       margin: EdgeInsets.symmetric(vertical: spacing),
       padding: EdgeInsets.all(spacing),
                   decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey.shade400),
-                    borderRadius: BorderRadius.circular(12),
-                    color: Colors.white,
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFFffffff),
+            Color(0xFFf8f9ff),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+            color: Colors.black.withOpacity(0.08),
             spreadRadius: 1,
-            blurRadius: 4,
-            offset: const Offset(0, 2),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
           ),
         ],
                   ),
@@ -911,16 +1138,42 @@ class _HomePageState extends State<HomePage> {
                           ),
                           const Spacer(),
               if (widget.userType == 'fisherman' && title == 'Slide Information')
-                            IconButton(
-                  icon: const Icon(Icons.add_circle_outline, color: Colors.deepPurple, size: 28),
+                Container(
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Color(0xFF667eea),
+                        Color(0xFF764ba2),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: IconButton(
+                    icon: const Icon(Icons.add_circle_outline, color: Colors.white, size: 28),
                               onPressed: () => _pickFile('file'),
                               tooltip: 'Upload Document',
+                  ),
                             ),
               if (widget.userType == 'fisherman' && title == 'Video Tutorials')
-                IconButton(
-                  icon: const Icon(Icons.add_circle_outline, color: Colors.deepPurple, size: 28),
+                Container(
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Color(0xFF667eea),
+                        Color(0xFF764ba2),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: IconButton(
+                    icon: const Icon(Icons.add_circle_outline, color: Colors.white, size: 28),
                   onPressed: () => _pickFile('video'),
                   tooltip: 'Upload Video',
+                  ),
                             ),
                         ],
                       ),

@@ -26,6 +26,57 @@ class _SignUpScreenState extends State<SignUpScreen> {
   bool _showConfirmPassword = false;
   bool _isLoading = false;
 
+  // Light ocean gradient to highlight the logo
+  static const LinearGradient oceanGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xFFe0f7fa), // Light aqua
+      Color(0xFFb3e5fc), // Pale blue
+      Color(0xFF81d4fa), // Soft blue
+      Color(0xFFb2ebf2), // Light teal
+      Color(0xFFe1f5fe), // Very light blue
+    ],
+  );
+
+  static const LinearGradient cardGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xFFF8FAFC), // Light sea foam
+      Color(0xFFE0F2FE), // Very light blue
+      Color(0xFFF0F9FF), // Ice blue
+    ],
+  );
+
+  static const LinearGradient buttonGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xFF1E40AF), // Deep blue
+      Color(0xFF3B82F6), // Ocean blue
+    ],
+  );
+
+  static const LinearGradient accentGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xFF0F766E), // Teal
+      Color(0xFF14B8A6), // Sea green
+    ],
+  );
+
+  static const LinearGradient inputGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xFFF0F9FF), // Ice blue
+      Color(0xFFE0F2FE), // Light blue
+      Color(0xFFF8FAFC), // Sea foam
+    ],
+  );
+
   void _showSuccessDialog() {
     showDialog(
       context: context,
@@ -244,154 +295,219 @@ class _SignUpScreenState extends State<SignUpScreen> {
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F7F7),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: EdgeInsets.symmetric(
-            horizontal: horizontalPadding,
-            vertical: verticalPadding,
-          ),
-          child: Center(
-            child: Container(
-              width: containerWidth,
-              constraints: BoxConstraints(
-                maxWidth: 500,
-              ),
-              padding: EdgeInsets.all(horizontalPadding),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.grey.shade300),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.withOpacity(0.1),
-                    spreadRadius: 1,
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Center(
-                    child: Text(
-                      "SIGN UP",
-                      style: TextStyle(
-                        fontSize: titleFontSize,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 1.2,
-                      ),
+      body: Container(
+        decoration: const BoxDecoration(gradient: oceanGradient),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: EdgeInsets.symmetric(
+              horizontal: horizontalPadding,
+              vertical: verticalPadding,
+            ),
+            child: Center(
+              child: Container(
+                width: containerWidth,
+                constraints: BoxConstraints(
+                  maxWidth: 500,
+                ),
+                padding: EdgeInsets.all(horizontalPadding),
+                decoration: BoxDecoration(
+                  gradient: cardGradient,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.15),
+                      spreadRadius: 2,
+                      blurRadius: 20,
+                      offset: const Offset(0, 8),
                     ),
-                  ),
-                  SizedBox(height: spacing * 2),
-                  _buildResponsiveTextField(
-                    "Email or Mobile Number", 
-                    _emailController,
-                    fontSize: fontSize,
-                  ),
-                  SizedBox(height: spacing),
-                  _buildResponsiveTextField(
-                    "First Name", 
-                    _firstNameController,
-                    fontSize: fontSize,
-                  ),
-                  SizedBox(height: spacing),
-                  _buildResponsiveTextField(
-                    "Middle Name", 
-                    _middleNameController,
-                    fontSize: fontSize,
-                  ),
-                  SizedBox(height: spacing),
-                  _buildResponsiveTextField(
-                    "Last Name", 
-                    _lastNameController,
-                    fontSize: fontSize,
-                  ),
-                  SizedBox(height: spacing),
-                  _buildResponsiveTextField(
-                    "Address", 
-                    _addressController,
-                    fontSize: fontSize,
-                  ),
-                  SizedBox(height: spacing),
-                  _buildResponsiveTextField(
-                    "Mobile Number",
-                    _cpNumberController,
-                    keyboardType: TextInputType.phone,
-                    fontSize: fontSize,
-                  ),
-                  SizedBox(height: spacing),
-                  _buildResponsivePasswordField(
-                    "Password", 
-                    _passwordController, 
-                    false,
-                    fontSize: fontSize,
-                  ),
-                  SizedBox(height: spacing),
-                  _buildResponsivePasswordField(
-                    "Confirm Password", 
-                    _confirmPasswordController, 
-                    true,
-                    fontSize: fontSize,
-                  ),
-                  SizedBox(height: spacing * 2),
-                  ElevatedButton(
-                    onPressed: _isLoading ? null : _signUp,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF2B3A55),
-                      foregroundColor: Colors.white,
-                      padding: EdgeInsets.symmetric(vertical: fontSize + 6),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    child: _isLoading
-                        ? SizedBox(
-                            height: fontSize + 6,
-                            width: fontSize + 6,
-                            child: const CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                            ),
-                          )
-                        : Text(
-                            "Sign Up",
-                            style: TextStyle(fontSize: fontSize + 1),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Logo with gradient background
+                    Container(
+                      width: 100,
+                      height: 100,
+                      decoration: BoxDecoration(
+                        gradient: buttonGradient,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.2),
+                            blurRadius: 12,
+                            offset: const Offset(0, 6),
                           ),
-                  ),
-                  SizedBox(height: spacing),
-                  Wrap(
-                    alignment: WrapAlignment.center,
-                    children: [
-                      Text(
-                        "Already have an account? ",
-                        style: TextStyle(fontSize: fontSize - 1),
+                        ],
                       ),
-                      GestureDetector(
-                        onTap: () {
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  LoginScreen(userType: widget.userType),
-                            ),
-                          );
-                        },
-                        child: Text(
-                          "Login",
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: const Color(0xFF2B3A55),
-                            fontSize: fontSize - 1,
-                          ),
+                      child: ClipOval(
+                        child: Image.asset(
+                          'assets/images/logo1.jpg',
+                          width: 100,
+                          height: 100,
+                          fit: BoxFit.cover,
                         ),
                       ),
-                    ],
-                  ),
-                  SizedBox(height: spacing), // Extra space at bottom for safe scrolling
-                ],
+                    ),
+                    SizedBox(height: spacing * 1.5),
+                    Center(
+                      child: Text(
+                        "SIGN UP",
+                        style: TextStyle(
+                          fontSize: titleFontSize,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1.2,
+                          color: const Color(0xFF243B5E),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: spacing * 2),
+                    _buildResponsiveTextField(
+                      "Email or Mobile Number", 
+                      _emailController,
+                      fontSize: fontSize,
+                    ),
+                    SizedBox(height: spacing),
+                    _buildResponsiveTextField(
+                      "First Name", 
+                      _firstNameController,
+                      fontSize: fontSize,
+                    ),
+                    SizedBox(height: spacing),
+                    _buildResponsiveTextField(
+                      "Middle Name", 
+                      _middleNameController,
+                      fontSize: fontSize,
+                    ),
+                    SizedBox(height: spacing),
+                    _buildResponsiveTextField(
+                      "Last Name", 
+                      _lastNameController,
+                      fontSize: fontSize,
+                    ),
+                    SizedBox(height: spacing),
+                    _buildResponsiveTextField(
+                      "Address", 
+                      _addressController,
+                      fontSize: fontSize,
+                    ),
+                    SizedBox(height: spacing),
+                    _buildResponsiveTextField(
+                      "Mobile Number",
+                      _cpNumberController,
+                      keyboardType: TextInputType.phone,
+                      fontSize: fontSize,
+                    ),
+                    SizedBox(height: spacing),
+                    _buildResponsivePasswordField(
+                      "Password", 
+                      _passwordController, 
+                      false,
+                      fontSize: fontSize,
+                    ),
+                    SizedBox(height: spacing),
+                    _buildResponsivePasswordField(
+                      "Confirm Password", 
+                      _confirmPasswordController, 
+                      true,
+                      fontSize: fontSize,
+                    ),
+                    SizedBox(height: spacing * 2),
+                    Container(
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        gradient: buttonGradient,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.2),
+                            blurRadius: 12,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
+                      ),
+                      child: ElevatedButton(
+                        onPressed: _isLoading ? null : _signUp,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.transparent,
+                          foregroundColor: Colors.white,
+                          shadowColor: Colors.transparent,
+                          padding: EdgeInsets.symmetric(vertical: fontSize + 6),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          minimumSize: const Size.fromHeight(0),
+                          maximumSize: const Size(double.infinity, double.infinity),
+                        ),
+                        child: _isLoading
+                            ? SizedBox(
+                                height: fontSize + 6,
+                                width: fontSize + 6,
+                                child: const CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                ),
+                              )
+                            : Text(
+                                "Sign Up",
+                                style: TextStyle(fontSize: fontSize + 1, fontWeight: FontWeight.bold),
+                              ),
+                      ),
+                    ),
+                    SizedBox(height: spacing),
+                    Container(
+                      padding: EdgeInsets.all(horizontalPadding * 0.5),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            Color(0xFFffffff),
+                            Color(0xFFf0f4ff),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Wrap(
+                        alignment: WrapAlignment.center,
+                        children: [
+                          Text(
+                            "Already have an account? ",
+                            style: TextStyle(fontSize: fontSize - 1),
+                          ),
+                          GestureDetector(
+                            onTap: () {
+                              Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      LoginScreen(userType: widget.userType),
+                                ),
+                              );
+                            },
+                            child: Text(
+                              "Login",
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFF667eea),
+                                fontSize: fontSize - 1,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(height: spacing), // Extra space at bottom for safe scrolling
+                  ],
+                ),
               ),
             ),
           ),

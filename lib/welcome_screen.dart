@@ -33,47 +33,74 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     
     if (screenWidth < 360) {
       // Very small screens (old phones)
-      logoRadius = 60.0;
-      logoSize = 120.0;
-    } else if (screenWidth < 480) {
-      // Small screens
-      logoRadius = 70.0;
-      logoSize = 140.0;
-    } else if (screenWidth < 768) {
-      // Medium screens (tablets)
       logoRadius = 80.0;
       logoSize = 160.0;
-    } else {
-      // Large screens (desktop)
+    } else if (screenWidth < 480) {
+      // Small screens
       logoRadius = 100.0;
       logoSize = 200.0;
+    } else if (screenWidth < 768) {
+      // Medium screens (tablets)
+      logoRadius = 120.0;
+      logoSize = 240.0;
+    } else {
+      // Large screens (desktop)
+      logoRadius = 140.0;
+      logoSize = 280.0;
     }
 
+    // Light ocean gradient to highlight the logo
+    const LinearGradient oceanGradient = LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [
+        Color(0xFFe0f7fa), // Light aqua
+        Color(0xFFb3e5fc), // Pale blue
+        Color(0xFF81d4fa), // Soft blue
+        Color(0xFFb2ebf2), // Light teal
+        Color(0xFFe1f5fe), // Very light blue
+      ],
+    );
+
+    const LinearGradient logoGradient = LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [
+        Color(0xFF06B6D4), // Cyan
+        Color(0xFF0891B2), // Ocean cyan
+        Color(0xFF0EA5E9), // Sky blue
+      ],
+    );
+
     return Scaffold(
-      backgroundColor: const Color(0xFF7A9BAE),
-      body: SafeArea(
-        child: Center(
-          child: Container(
-            width: logoSize,
-            height: logoSize,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  spreadRadius: 2,
-                  blurRadius: 15,
-                  offset: const Offset(0, 4),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: oceanGradient,
+        ),
+        child: SafeArea(
+          child: Center(
+            child: Container(
+              width: logoSize,
+              height: logoSize,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: logoGradient,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.12),
+                    spreadRadius: 2,
+                    blurRadius: 18,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: ClipOval(
+                child: Image.asset(
+                  'assets/images/logo1.jpg',
+                  width: logoSize,
+                  height: logoSize,
+                  fit: BoxFit.cover,
                 ),
-              ],
-            ),
-            child: ClipOval(
-              child: Image.asset(
-                'assets/images/logo.png',
-                width: logoSize * 0.8,
-                height: logoSize * 0.8,
-                fit: BoxFit.cover,
               ),
             ),
           ),

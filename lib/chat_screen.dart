@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'homed.dart';
 
 class ChatScreen extends StatefulWidget {
   final String chatId;
@@ -8,7 +9,8 @@ class ChatScreen extends StatefulWidget {
   final String userType;
   final String otherUserName;
   final String? otherUserAvatar;
-  const ChatScreen({super.key, required this.chatId, required this.otherUserId, required this.userType, required this.otherUserName, this.otherUserAvatar});
+  final bool fromVendorProfile;
+  const ChatScreen({super.key, required this.chatId, required this.otherUserId, required this.userType, required this.otherUserName, this.otherUserAvatar, this.fromVendorProfile = false});
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -17,6 +19,55 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+
+  // Ocean/Fisherman themed gradients
+  static const LinearGradient oceanGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xFFe0f7fa), // Light aqua
+      Color(0xFFb3e5fc), // Pale blue
+      Color(0xFF81d4fa), // Soft blue
+      Color(0xFFb2ebf2), // Light teal
+      Color(0xFFe1f5fe), // Very light blue
+    ],
+  );
+
+  static const LinearGradient cardGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xFFffffff), // Pure white
+      Color(0xFFf8f9fa), // Light gray
+    ],
+  );
+
+  static const LinearGradient buttonGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xFF1E40AF), // Deep blue
+      Color(0xFF3B82F6), // Ocean blue
+    ],
+  );
+
+  static const LinearGradient accentGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xFFe3f2fd), // Light blue
+      Color(0xFFf3e5f5), // Light purple
+    ],
+  );
+
+  static const LinearGradient messageGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xFFffffff), // Pure white
+      Color(0xFFf8f9fa), // Light gray
+    ],
+  );
 
   @override
   void initState() {
@@ -93,11 +144,36 @@ class _ChatScreenState extends State<ChatScreen> {
     // Determine which collection to use for the other user
     final otherUserCollection = widget.userType == 'fisherman' ? 'customer' : 'fisherman';
     return Scaffold(
-      backgroundColor: Colors.grey[100],
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF3A4A6C),
-        iconTheme: const IconThemeData(color: Colors.white),
-        title: StreamBuilder<DocumentSnapshot>(
+      body: Container(
+        decoration: const BoxDecoration(gradient: oceanGradient),
+        child: Column(
+          children: [
+            // Custom AppBar with gradient
+            Container(
+              decoration: const BoxDecoration(gradient: oceanGradient),
+              child: SafeArea(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.arrow_back, color: Colors.black),
+                        onPressed: () {
+                          if (widget.fromVendorProfile) {
+                            // Navigate back to home screen when accessed from vendor profile
+                            Navigator.of(context).pushAndRemoveUntil(
+                              MaterialPageRoute(
+                                builder: (context) => HomePage(userType: widget.userType),
+                              ),
+                              (route) => false,
+                            );
+                          } else {
+                            // Normal back navigation when accessed from messages screen
+                            Navigator.of(context).pop();
+                          }
+                        },
+                      ),
+                      StreamBuilder<DocumentSnapshot>(
           stream: FirebaseFirestore.instance.collection('profile').doc(widget.otherUserId).snapshots(),
           builder: (context, snapshot) {
             String displayName = widget.otherUserName;
@@ -118,7 +194,8 @@ class _ChatScreenState extends State<ChatScreen> {
                 if (picSnap.hasData && picSnap.data!.docs.isNotEmpty) {
                   avatarUrl = picSnap.data!.docs.first['url'] as String?;
                 }
-                return Row(
+                              return Expanded(
+                                child: Row(
                   children: [
                     CircleAvatar(
                       backgroundColor: Colors.blue[100],
@@ -136,20 +213,34 @@ class _ChatScreenState extends State<ChatScreen> {
                     Expanded(
                       child: Text(
                         displayName.isEmpty ? 'Chat' : displayName,
-                        style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                        style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
+                                ),
                 );
               },
             );
           },
+                      ),
+                    ],
+                  ),
+                ),
         ),
       ),
-      body: Column(
-        children: [
           Expanded(
+              child: Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Color(0xFFf8f9ff),
+                      Color(0xFFffffff),
+                    ],
+                  ),
+                ),
             child: StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
                   .collection('messages')
@@ -210,7 +301,7 @@ class _ChatScreenState extends State<ChatScreen> {
                             ),
                             padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
                             decoration: BoxDecoration(
-                              color: isMe ? Colors.blue[400] : Colors.white,
+                                  gradient: isMe ? messageGradient : accentGradient,
                               borderRadius: BorderRadius.only(
                                 topLeft: const Radius.circular(16),
                                 topRight: const Radius.circular(16),
@@ -219,9 +310,9 @@ class _ChatScreenState extends State<ChatScreen> {
                               ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.04),
-                                  blurRadius: 4,
-                                  offset: const Offset(0, 2),
+                                      color: Colors.black.withOpacity(0.08),
+                                      blurRadius: 6,
+                                      offset: const Offset(0, 3),
                                 ),
                               ],
                             ),
@@ -250,7 +341,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                 Text(
                                   data['text'] ?? '',
                                   style: TextStyle(
-                                    color: isMe ? Colors.white : Colors.black87,
+                                    color: Colors.black,
                                     fontSize: fontSize,
                                   ),
                                 ),
@@ -260,7 +351,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                     child: Text(
                                       '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}',
                                       style: TextStyle(
-                                        color: isMe ? Colors.white70 : Colors.grey[500],
+                                        color: Colors.grey[700],
                                         fontSize: fontSize - 4,
                                       ),
                                     ),
@@ -276,10 +367,20 @@ class _ChatScreenState extends State<ChatScreen> {
                   },
                 );
               },
+                ),
             ),
           ),
           Container(
-            color: Colors.white,
+              decoration: const BoxDecoration(
+                gradient: accentGradient,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black12,
+                    blurRadius: 8,
+                    offset: Offset(0, -2),
+                  ),
+                ],
+              ),
             padding: EdgeInsets.only(
               left: 12,
               right: 8,
@@ -291,9 +392,16 @@ class _ChatScreenState extends State<ChatScreen> {
                 Expanded(
                   child: Container(
                     decoration: BoxDecoration(
-                      color: Colors.grey[100],
+                        gradient: accentGradient,
                       borderRadius: BorderRadius.circular(24),
                       border: Border.all(color: Colors.grey[300]!),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
                     ),
                     child: TextField(
                       controller: _controller,
@@ -307,17 +415,31 @@ class _ChatScreenState extends State<ChatScreen> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                CircleAvatar(
-                  backgroundColor: const Color(0xFF3A4A6C),
+                  Container(
+                    decoration: BoxDecoration(
+                      gradient: buttonGradient,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.2),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: CircleAvatar(
+                      backgroundColor: Colors.transparent,
                   child: IconButton(
                     icon: const Icon(Icons.send, color: Colors.white),
                     onPressed: _sendMessage,
+                      ),
                   ),
                 ),
               ],
             ),
           ),
         ],
+        ),
       ),
     );
   }

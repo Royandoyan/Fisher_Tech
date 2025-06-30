@@ -34,6 +34,56 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String? profileImageUrl;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
+  // Light ocean gradient to highlight the logo
+  static const LinearGradient oceanGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xFFe0f7fa), // Light aqua
+      Color(0xFFb3e5fc), // Pale blue
+      Color(0xFF81d4fa), // Soft blue
+      Color(0xFFb2ebf2), // Light teal
+      Color(0xFFe1f5fe), // Very light blue
+    ],
+  );
+
+  static const LinearGradient cardGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xFFF8FAFC), // Light sea foam
+      Color(0xFFE0F2FE), // Very light blue
+      Color(0xFFF0F9FF), // Ice blue
+    ],
+  );
+
+  static const LinearGradient buttonGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xFF1E40AF), // Deep blue
+      Color(0xFF3B82F6), // Ocean blue
+    ],
+  );
+
+  static const LinearGradient accentGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xFF0F766E), // Teal
+      Color(0xFF14B8A6), // Sea green
+    ],
+  );
+
+  static const LinearGradient avatarGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xFF0EA5E9), // Sky blue
+      Color(0xFF3B82F6), // Ocean blue
+    ],
+  );
+
   // Responsive design helpers
   double _getResponsiveFontSize(double width, {double baseSize = 16.0}) {
     if (width < 480) return baseSize - 2;
@@ -372,7 +422,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       elevation: 0,
       toolbarHeight: toolbarHeight,
       leading: IconButton(
-        icon: Icon(Icons.menu, size: _getResponsiveIconSize(screenWidth)),
+        icon: Icon(Icons.menu, color: Color(0xFF1976D2), size: _getResponsiveIconSize(screenWidth)),
         onPressed: () => _scaffoldKey.currentState?.openDrawer(),
       ),
       title: Row(
@@ -387,13 +437,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
               );
             },
             child: Image.asset(
-              'assets/images/logo.png',
+              'assets/images/logo1.jpg',
               height: logoHeight,
             ),
           ),
           const Spacer(),
           IconButton(
-            icon: Icon(Icons.shopping_bag_outlined, color: Colors.black, size: _getResponsiveIconSize(screenWidth)),
+            icon: Icon(Icons.shopping_bag_outlined, color: Color(0xFF1976D2), size: _getResponsiveIconSize(screenWidth)),
             onPressed: () {
               Navigator.push(
                 context,
@@ -404,7 +454,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             },
           ),
           IconButton(
-            icon: Icon(Icons.shopping_cart_outlined, color: Colors.black, size: _getResponsiveIconSize(screenWidth)),
+            icon: Icon(Icons.shopping_cart_outlined, color: Color(0xFF1976D2), size: _getResponsiveIconSize(screenWidth)),
             onPressed: () {
               Navigator.push(
                 context,
@@ -415,7 +465,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             },
           ),
           IconButton(
-            icon: Icon(Icons.notifications_none, color: Colors.black, size: _getResponsiveIconSize(screenWidth)),
+            icon: Icon(Icons.notifications_none, color: Color(0xFF1976D2), size: _getResponsiveIconSize(screenWidth)),
             onPressed: () {
               Navigator.push(
                 context,
@@ -426,7 +476,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             },
           ),
           IconButton(
-            icon: Icon(Icons.person_outline, color: Colors.black, size: _getResponsiveIconSize(screenWidth)),
+            icon: Icon(Icons.person_outline, color: Color(0xFF1976D2), size: _getResponsiveIconSize(screenWidth)),
             onPressed: () {}, // Already on profile
           ),
         ],
@@ -593,27 +643,136 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final cameraRadius = screenWidth < 480 ? 15.0 : 18.0;
     
     if (isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
-
-    if (userData == null) {
       return Scaffold(
-        appBar: _buildAppBar(context),
+        key: _scaffoldKey,
         drawer: _buildDrawer(),
-        body: Center(
+        body: Container(
+          decoration: const BoxDecoration(color: Colors.white),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(
-                'Failed to load profile data',
-                style: TextStyle(fontSize: fontSize),
+              // Custom AppBar with white background
+              Container(
+                decoration: const BoxDecoration(color: Colors.white),
+                child: SafeArea(
+                  child: Container(
+                    padding: EdgeInsets.symmetric(horizontal: padding, vertical: spacing),
+                    child: Row(
+                      children: [
+                        IconButton(
+                          icon: Icon(Icons.menu, color: Color(0xFF1976D2), size: iconSize),
+                          onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+                        ),
+                        GestureDetector(
+                          onTap: () {
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => HomePage(userType: widget.userType),
+                              ),
+                            );
+                          },
+                          child: Image.asset(
+                            'assets/images/logo1.jpg',
+                            height: 40,
+                          ),
+                        ),
+                        const Spacer(),
+                        IconButton(
+                          icon: Icon(Icons.shopping_bag_outlined, color: Color(0xFF1976D2)),
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    ShoppingScreen(userType: widget.userType),
+                              ),
+                            );
+                          },
+                        ),
+                        IconButton(
+                          icon: Icon(Icons.shopping_cart_outlined, color: Color(0xFF1976D2)),
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => AddToCart(userType: widget.userType),
+                              ),
+                            );
+                          },
+                        ),
+                        IconButton(
+                          icon: Icon(Icons.notifications_none, color: Color(0xFF1976D2)),
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    NotificationScreen(userType: widget.userType),
+                              ),
+                            );
+                          },
+                        ),
+                        IconButton(
+                          icon: Icon(Icons.person_outline, color: Color(0xFF1976D2)),
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    ProfileScreen(userType: widget.userType),
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ),
-              SizedBox(height: spacing),
-              ElevatedButton(
-                onPressed: _fetchUserData,
-                child: Text('Retry', style: TextStyle(fontSize: fontSize - 2)),
+              Expanded(
+                child: Center(
+                  child: Container(
+                    margin: const EdgeInsets.all(24),
+                    padding: const EdgeInsets.all(32),
+                    decoration: BoxDecoration(
+                      gradient: cardGradient,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 15,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            gradient: oceanGradient,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const CircularProgressIndicator(
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            strokeWidth: 3,
+                          ),
+                        ),
+                        const SizedBox(height: 18),
+                        Text(
+                          'Loading profile...',
+                          style: TextStyle(
+                            fontSize: fontSize + 2,
+                            color: Colors.grey[700],
+                            fontWeight: FontWeight.w500,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ),
             ],
           ),
@@ -623,175 +782,381 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     return Scaffold(
       key: _scaffoldKey,
-      appBar: _buildAppBar(context),
       drawer: _buildDrawer(),
-      backgroundColor: Colors.white,
-      body: Column(
-        children: [
-          SizedBox(height: spacing * 0.8),
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              CircleAvatar(
-                radius: avatarRadius,
-                backgroundColor: Colors.grey,
-                backgroundImage: (profileImageUrl != null && profileImageUrl!.isNotEmpty)
-                    ? NetworkImage(profileImageUrl!)
-                    : const AssetImage('assets/images/woman.png') as ImageProvider,
-              ),
-              Positioned(
-                bottom: 0,
-                right: 0,
-                child: GestureDetector(
-                  onTap: _pickAndUploadProfileImage,
-                  child: CircleAvatar(
-                    radius: cameraRadius,
-                    backgroundColor: Colors.white,
-                    child: Icon(Icons.camera_alt, size: cameraIconSize, color: Colors.black),
+      body: Container(
+        decoration: const BoxDecoration(color: Colors.white),
+        child: Column(
+          children: [
+            // Custom AppBar with white background
+            Container(
+              decoration: const BoxDecoration(color: Colors.white),
+              child: SafeArea(
+                child: Container(
+                  padding: EdgeInsets.symmetric(horizontal: padding, vertical: spacing),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        icon: Icon(Icons.menu, color: Color(0xFF1976D2), size: iconSize),
+                        onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+                      ),
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => HomePage(userType: widget.userType),
+                            ),
+                          );
+                        },
+                        child: Image.asset(
+                          'assets/images/logo1.jpg',
+                          height: 40,
+                        ),
+                      ),
+                      const Spacer(),
+                      IconButton(
+                        icon: Icon(Icons.shopping_bag_outlined, color: Color(0xFF1976D2)),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  ShoppingScreen(userType: widget.userType),
+                            ),
+                          );
+                        },
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.shopping_cart_outlined, color: Color(0xFF1976D2)),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => AddToCart(userType: widget.userType),
+                            ),
+                          );
+                        },
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.notifications_none, color: Color(0xFF1976D2)),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  NotificationScreen(userType: widget.userType),
+                            ),
+                          );
+                        },
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.person_outline, color: Color(0xFF1976D2)),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  ProfileScreen(userType: widget.userType),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
                   ),
                 ),
               ),
-            ],
-          ),
-          SizedBox(height: spacing * 0.8),
-          Text(
-            _getFullName(),
-            style: TextStyle(
-              fontSize: fontSize + 8,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
             ),
-          ),
-          SizedBox(height: 4),
-          Text(
-            '${userData?['email'] ?? 'No email'} | ${userData?['cpNumber'] ?? 'No cpNumber'}',
-            style: TextStyle(
-              fontSize: fontSize + 2,
-              color: Colors.blueGrey[700],
-              fontWeight: FontWeight.w600,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          SizedBox(height: spacing * 1.5),
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: padding),
-            child: Card(
-              elevation: 2,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Column(
-                children: [
-                  ListTile(
-                    leading: Icon(Icons.edit, size: iconSize),
-                    title: Text(
-                      'Edit profile information',
-                      style: TextStyle(fontSize: fontSize),
-                    ),
-                    onTap: () {
-                      _navigateToEditProfile();
-                    },
-                  ),
-                  if ((userType ?? widget.userType) == 'fisherman')
-                    ListTile(
-                      leading: Icon(Icons.inventory_2, size: iconSize),
-                      title: Text(
-                        'My Products',
-                        style: TextStyle(fontSize: fontSize),
-                      ),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const ProductScreen(),
+            Expanded(
+              child: Container(
+                decoration: const BoxDecoration(gradient: oceanGradient),
+                child: Column(
+                  children: [
+                    SizedBox(height: spacing * 0.8),
+                    Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Container(
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                Color(0xFF667eea),
+                                Color(0xFF764ba2),
+                              ],
+                            ),
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.2),
+                                blurRadius: 12,
+                                offset: const Offset(0, 6),
+                              ),
+                            ],
                           ),
-                        );
-                      },
-                    ),
-                  ListTile(
-                    leading: Icon(Icons.info, size: iconSize),
-                    title: Text(
-                      'Developer Details',
-                      style: TextStyle(fontSize: fontSize),
-                    ),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (context) => const DeveloperScreen()),
-                      );
-                    },
-                  ),
-                  ListTile(
-                    leading: Icon(Icons.message, size: iconSize),
-                    title: Text(
-                      'Messages',
-                      style: TextStyle(fontSize: fontSize),
-                    ),
-                    trailing: StreamBuilder<QuerySnapshot>(
-                      stream: FirebaseFirestore.instance
-                          .collection('messages')
-                          .where('participants', arrayContains: FirebaseAuth.instance.currentUser?.uid)
-                          .snapshots(),
-                      builder: (context, snapshot) {
-                        if (!snapshot.hasData) return const SizedBox.shrink();
-                        final chats = snapshot.data!.docs;
-                        final user = FirebaseAuth.instance.currentUser;
-                        if (user == null || chats.isEmpty) return const SizedBox.shrink();
-                        // Listen to all chats' subcollections as streams
-                        return StreamBuilder<List<QuerySnapshot>>(
-                          stream: CombineLatestStream.list(
-                            chats.map((chat) =>
-                              FirebaseFirestore.instance
-                                .collection('messages')
-                                .doc(chat.id)
-                                .collection('chats')
-                                .snapshots()
-                            ).toList(),
+                          child: CircleAvatar(
+                            radius: avatarRadius,
+                            backgroundColor: Colors.transparent,
+                            backgroundImage: (profileImageUrl != null && profileImageUrl!.isNotEmpty)
+                                ? NetworkImage(profileImageUrl!)
+                                : const AssetImage('assets/images/woman.png') as ImageProvider,
                           ),
-                          builder: (context, chatSnaps) {
-                            if (!chatSnaps.hasData) return const SizedBox.shrink();
-                            int totalUnread = 0;
-                            for (final chatSnap in chatSnaps.data!) {
-                              for (final doc in chatSnap.docs) {
-                                final data = doc.data() as Map<String, dynamic>;
-                                final readBy = (data['readBy'] is List)
-                                    ? List<String>.from(data['readBy'])
-                                    : <String>[];
-                                if (!readBy.contains(user.uid)) totalUnread++;
-                              }
-                            }
-                            return totalUnread > 0
-                                ? Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      color: Colors.red,
-                                      borderRadius: BorderRadius.circular(14),
-                                    ),
-                                    child: Text(
-                                      '$totalUnread',
-                                      style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
-                                    ),
-                                  )
-                                : const SizedBox.shrink();
-                          },
-                        );
-                      },
-                    ),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => MessagesScreen(userType: userType ?? widget.userType),
                         ),
-                      );
-                    },
-                  ),
-                ],
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: GestureDetector(
+                            onTap: _pickAndUploadProfileImage,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [
+                                    Color(0xFFffffff),
+                                    Color(0xFFf8f9ff),
+                                  ],
+                                ),
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.1),
+                                    blurRadius: 6,
+                                    offset: const Offset(0, 3),
+                                  ),
+                                ],
+                              ),
+                              child: CircleAvatar(
+                                radius: cameraRadius,
+                                backgroundColor: Colors.transparent,
+                                child: Icon(Icons.camera_alt, size: cameraIconSize, color: Colors.grey[700]),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: spacing * 0.8),
+                    Text(
+                      _getFullName(),
+                      style: TextStyle(
+                        fontSize: fontSize + 8,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      '${userData?['email'] ?? 'No email'} | ${userData?['cpNumber'] ?? 'No cpNumber'}',
+                      style: TextStyle(
+                        fontSize: fontSize + 2,
+                        color: Colors.blueGrey[700],
+                        fontWeight: FontWeight.w600,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    SizedBox(height: spacing * 1.5),
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: padding),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              Color(0xFFffffff),
+                              Color(0xFFf8f9ff),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 15,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          children: [
+                            ListTile(
+                              leading: Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                    colors: [
+                                      Color(0xFF667eea),
+                                      Color(0xFF764ba2),
+                                    ],
+                                  ),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(Icons.edit, size: iconSize - 4, color: Colors.white),
+                              ),
+                              title: Text(
+                                'Edit profile information',
+                                style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.w600),
+                              ),
+                              onTap: () {
+                                _navigateToEditProfile();
+                              },
+                            ),
+                            if ((userType ?? widget.userType) == 'fisherman')
+                              ListTile(
+                                leading: Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                      colors: [
+                                        Color(0xFF667eea),
+                                        Color(0xFF764ba2),
+                                      ],
+                                    ),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(Icons.inventory_2, size: iconSize - 4, color: Colors.white),
+                                ),
+                                title: Text(
+                                  'My Products',
+                                  style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.w600),
+                                ),
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => const ProductScreen(),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ListTile(
+                              leading: Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                    colors: [
+                                      Color(0xFF667eea),
+                                      Color(0xFF764ba2),
+                                    ],
+                                  ),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(Icons.info, size: iconSize - 4, color: Colors.white),
+                              ),
+                              title: Text(
+                                'Developer Details',
+                                style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.w600),
+                              ),
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (context) => const DeveloperScreen()),
+                                );
+                              },
+                            ),
+                            ListTile(
+                              leading: Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                    colors: [
+                                      Color(0xFF667eea),
+                                      Color(0xFF764ba2),
+                                    ],
+                                  ),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(Icons.message, size: iconSize - 4, color: Colors.white),
+                              ),
+                              title: Text(
+                                'Messages',
+                                style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.w600),
+                              ),
+                              trailing: StreamBuilder<QuerySnapshot>(
+                                stream: FirebaseFirestore.instance
+                                    .collection('messages')
+                                    .where('participants', arrayContains: FirebaseAuth.instance.currentUser?.uid)
+                                    .snapshots(),
+                                builder: (context, snapshot) {
+                                  if (!snapshot.hasData) return const SizedBox.shrink();
+                                  final chats = snapshot.data!.docs;
+                                  final user = FirebaseAuth.instance.currentUser;
+                                  if (user == null || chats.isEmpty) return const SizedBox.shrink();
+                                  // Listen to all chats' subcollections as streams
+                                  return StreamBuilder<List<QuerySnapshot>>(
+                                    stream: CombineLatestStream.list(
+                                      chats.map((chat) =>
+                                        FirebaseFirestore.instance
+                                          .collection('messages')
+                                          .doc(chat.id)
+                                          .collection('chats')
+                                          .snapshots()
+                                      ).toList(),
+                                    ),
+                                    builder: (context, chatSnaps) {
+                                      if (!chatSnaps.hasData) return const SizedBox.shrink();
+                                      int totalUnread = 0;
+                                      for (final chatSnap in chatSnaps.data!) {
+                                        for (final doc in chatSnap.docs) {
+                                          final data = doc.data() as Map<String, dynamic>;
+                                          final readBy = (data['readBy'] is List)
+                                              ? List<String>.from(data['readBy'])
+                                              : <String>[];
+                                          if (!readBy.contains(user.uid)) totalUnread++;
+                                        }
+                                      }
+                                      return totalUnread > 0
+                                          ? Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                              decoration: BoxDecoration(
+                                                            gradient: const LinearGradient(
+                                                              begin: Alignment.topLeft,
+                                                              end: Alignment.bottomRight,
+                                                              colors: [
+                                                                Color(0xFF667eea),
+                                                                Color(0xFF764ba2),
+                                                              ],
+                                                            ),
+                                            borderRadius: BorderRadius.circular(14),
+                                          ),
+                                          child: Text(
+                                            '$totalUnread',
+                                            style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                                          ),
+                                        )
+                                      : const SizedBox.shrink();
+                                    },
+                                  );
+                                },
+                              ),
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => MessagesScreen(userType: userType ?? widget.userType),
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

@@ -19,6 +19,57 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _obscureText = true;
   bool _isLoading = false;
 
+  // Light ocean gradient to highlight the logo
+  static const LinearGradient oceanGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xFFe0f7fa), // Light aqua
+      Color(0xFFb3e5fc), // Pale blue
+      Color(0xFF81d4fa), // Soft blue
+      Color(0xFFb2ebf2), // Light teal
+      Color(0xFFe1f5fe), // Very light blue
+    ],
+  );
+
+  static const LinearGradient cardGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xFFF8FAFC), // Light sea foam
+      Color(0xFFE0F2FE), // Very light blue
+      Color(0xFFF0F9FF), // Ice blue
+    ],
+  );
+
+  static const LinearGradient buttonGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xFF1E40AF), // Deep blue
+      Color(0xFF3B82F6), // Ocean blue
+    ],
+  );
+
+  static const LinearGradient accentGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xFF0F766E), // Teal
+      Color(0xFF14B8A6), // Sea green
+    ],
+  );
+
+  static const LinearGradient inputGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xFFF0F9FF), // Ice blue
+      Color(0xFFE0F2FE), // Light blue
+      Color(0xFFF8FAFC), // Sea foam
+    ],
+  );
+
   void _showSuccessDialog() {
     showDialog(
       context: context,
@@ -310,178 +361,280 @@ class _LoginScreenState extends State<LoginScreen> {
     final maxFormHeight = availableHeight * 0.85;
 
     return Scaffold(
-      backgroundColor: Colors.grey[100],
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: EdgeInsets.symmetric(
-              horizontal: horizontalPadding,
-              vertical: verticalPadding,
-            ),
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                minHeight: minFormHeight,
-                maxHeight: maxFormHeight,
+      body: Container(
+        decoration: const BoxDecoration(gradient: oceanGradient),
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: EdgeInsets.symmetric(
+                horizontal: horizontalPadding,
+                vertical: verticalPadding,
               ),
-              child: Container(
-                width: containerWidth,
+              child: ConstrainedBox(
                 constraints: BoxConstraints(
-                  maxWidth: 450,
                   minHeight: minFormHeight,
+                  maxHeight: maxFormHeight,
                 ),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  border: Border.all(color: Colors.grey.shade400),
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.grey.withOpacity(0.1),
-                      spreadRadius: 1,
-                      blurRadius: 10,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Padding(
-                  padding: EdgeInsets.all(horizontalPadding),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      // Logo section
-                      ClipOval(
-                        child: Image.asset(
-                          'assets/images/logo.png',
+                child: Container(
+                  width: containerWidth,
+                  constraints: BoxConstraints(
+                    maxWidth: 450,
+                    minHeight: minFormHeight,
+                  ),
+                  decoration: BoxDecoration(
+                    gradient: cardGradient,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.15),
+                        spreadRadius: 2,
+                        blurRadius: 20,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: Padding(
+                    padding: EdgeInsets.all(horizontalPadding),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        // Logo section with gradient background
+                        Container(
                           width: logoSize,
                           height: logoSize,
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                      SizedBox(height: horizontalPadding * 1.5),
-                      
-                      // Email field
-                      TextField(
-                        controller: _emailController,
-                        style: TextStyle(fontSize: fontSize),
-                        decoration: InputDecoration(
-                          labelText: 'Email',
-                          labelStyle: TextStyle(
-                            color: Colors.grey[700],
-                            fontSize: fontSize - 1,
+                          decoration: BoxDecoration(
+                            gradient: buttonGradient,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.3),
+                                blurRadius: 15,
+                                offset: const Offset(0, 8),
+                              ),
+                              BoxShadow(
+                                color: Colors.white.withOpacity(0.2),
+                                blurRadius: 8,
+                                offset: const Offset(0, -2),
+                              ),
+                            ],
                           ),
-                          border: const OutlineInputBorder(),
-                          focusedBorder: OutlineInputBorder(
-                            borderSide: BorderSide(color: Colors.blueGrey.shade700),
-                          ),
-                          contentPadding: EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: fontSize + 4,
-                          ),
-                        ),
-                      ),
-                      SizedBox(height: horizontalPadding),
-                      
-                      // Password field
-                      TextField(
-                        controller: _passwordController,
-                        obscureText: _obscureText,
-                        style: TextStyle(fontSize: fontSize),
-                        decoration: InputDecoration(
-                          labelText: 'Password',
-                          labelStyle: TextStyle(
-                            color: Colors.grey[700],
-                            fontSize: fontSize - 1,
-                          ),
-                          border: const OutlineInputBorder(),
-                          focusedBorder: OutlineInputBorder(
-                            borderSide: BorderSide(color: Colors.blueGrey.shade700),
-                          ),
-                          contentPadding: EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: fontSize + 4,
-                          ),
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              _obscureText ? Icons.visibility : Icons.visibility_off,
-                              color: Colors.blueGrey,
-                              size: fontSize + 4,
-                            ),
-                            onPressed: () {
-                              setState(() {
-                                _obscureText = !_obscureText;
-                              });
-                            },
-                          ),
-                        ),
-                      ),
-                      SizedBox(height: horizontalPadding * 0.5),
-                      
-                      // Login button
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: _isLoading ? null : _login,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF3A4A6C),
-                            foregroundColor: Colors.white,
-                            padding: EdgeInsets.symmetric(vertical: fontSize + 6),
-                            elevation: 4,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                          ),
-                          child: _isLoading
-                              ? SizedBox(
-                                  height: fontSize + 6,
-                                  width: fontSize + 6,
-                                  child: const CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                  ),
-                                )
-                              : Text(
-                                  'Login',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: fontSize,
+                          child: Stack(
+                            children: [
+                              ClipOval(
+                                child: Image.asset(
+                                  'assets/images/logo1.jpg',
+                                  width: logoSize,
+                                  height: logoSize,
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                              // Subtle overlay to enhance text visibility
+                              Container(
+                                width: logoSize,
+                                height: logoSize,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                    colors: [
+                                      Colors.white.withOpacity(0.1),
+                                      Colors.transparent,
+                                      Colors.black.withOpacity(0.05),
+                                    ],
                                   ),
                                 ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                      SizedBox(height: horizontalPadding * 1.5),
-
-                      // User type switch text
-                      Wrap(
-                        alignment: WrapAlignment.center,
-                        children: [
-                          Text(
-                            "$promptText ",
+                        SizedBox(height: horizontalPadding * 1.5),
+                        
+                        // Email field
+                        Container(
+                          decoration: BoxDecoration(
+                            gradient: inputGradient,
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.05),
+                                blurRadius: 8,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: TextField(
+                            controller: _emailController,
                             style: TextStyle(fontSize: fontSize),
-                          ),
-                          GestureDetector(
-                            onTap: () {
-                              // Go back to SelectionScreen
-                              Navigator.pushAndRemoveUntil(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const SelectionScreen(),
-                                ),
-                                (route) => false,
-                              );
-                            },
-                            child: Text(
-                              "Click Here",
-                              style: TextStyle(
-                                fontSize: fontSize,
-                                fontWeight: FontWeight.bold,
-                                decoration: TextDecoration.underline,
-                                color: const Color(0xFF243B5E),
+                            decoration: InputDecoration(
+                              labelText: 'Email',
+                              labelStyle: TextStyle(
+                                color: Colors.grey[700],
+                                fontSize: fontSize - 1,
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide.none,
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide(color: Colors.blueGrey.shade700, width: 2),
+                              ),
+                              contentPadding: EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: fontSize + 4,
                               ),
                             ),
                           ),
-                        ],
-                      ),
-                    ],
+                        ),
+                        SizedBox(height: horizontalPadding),
+                        
+                        // Password field
+                        Container(
+                          decoration: BoxDecoration(
+                            gradient: inputGradient,
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.05),
+                                blurRadius: 8,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: TextField(
+                            controller: _passwordController,
+                            obscureText: _obscureText,
+                            style: TextStyle(fontSize: fontSize),
+                            decoration: InputDecoration(
+                              labelText: 'Password',
+                              labelStyle: TextStyle(
+                                color: Colors.grey[700],
+                                fontSize: fontSize - 1,
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide.none,
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide(color: Colors.blueGrey.shade700, width: 2),
+                              ),
+                              contentPadding: EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: fontSize + 4,
+                              ),
+                              suffixIcon: IconButton(
+                                icon: Icon(
+                                  _obscureText ? Icons.visibility : Icons.visibility_off,
+                                  color: Colors.blueGrey,
+                                  size: fontSize + 4,
+                                ),
+                                onPressed: () {
+                                  setState(() {
+                                    _obscureText = !_obscureText;
+                                  });
+                                },
+                              ),
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: horizontalPadding * 0.5),
+                        
+                        // Login button
+                        Container(
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            gradient: buttonGradient,
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.2),
+                                blurRadius: 12,
+                                offset: const Offset(0, 6),
+                              ),
+                            ],
+                          ),
+                          child: ElevatedButton(
+                            onPressed: _isLoading ? null : _login,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.transparent,
+                              foregroundColor: Colors.white,
+                              padding: EdgeInsets.symmetric(vertical: fontSize + 6),
+                              elevation: 0,
+                              shadowColor: Colors.transparent,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: _isLoading
+                                ? SizedBox(
+                                    height: fontSize + 6,
+                                    width: fontSize + 6,
+                                    child: const CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                    ),
+                                  )
+                                : Text(
+                                    'Login',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: fontSize,
+                                    ),
+                                  ),
+                          ),
+                        ),
+                        SizedBox(height: horizontalPadding * 1.5),
+
+                        // User type switch text
+                        Container(
+                          padding: EdgeInsets.all(horizontalPadding * 0.5),
+                          decoration: BoxDecoration(
+                            gradient: inputGradient,
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.05),
+                                blurRadius: 8,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Wrap(
+                            alignment: WrapAlignment.center,
+                            children: [
+                              Text(
+                                "$promptText ",
+                                style: TextStyle(fontSize: fontSize),
+                              ),
+                              GestureDetector(
+                                onTap: () {
+                                  // Go back to SelectionScreen
+                                  Navigator.pushAndRemoveUntil(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => const SelectionScreen(),
+                                    ),
+                                    (route) => false,
+                                  );
+                                },
+                                child: Text(
+                                  "Click Here",
+                                  style: TextStyle(
+                                    fontSize: fontSize,
+                                    fontWeight: FontWeight.bold,
+                                    decoration: TextDecoration.underline,
+                                    color: const Color(0xFF667eea),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),

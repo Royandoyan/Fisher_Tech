@@ -35,6 +35,47 @@ class _ShoppingScreenState extends State<ShoppingScreen>
   // Cache for seller profile image URLs
   final Map<String, String?> _sellerProfileImageUrlCache = {};
 
+  // Light ocean gradient to highlight the logo
+  static const LinearGradient oceanGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xFFe0f7fa), // Light aqua
+      Color(0xFFb3e5fc), // Pale blue
+      Color(0xFF81d4fa), // Soft blue
+      Color(0xFFb2ebf2), // Light teal
+      Color(0xFFe1f5fe), // Very light blue
+    ],
+  );
+
+  static const LinearGradient cardGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xFFF8FAFC), // Light sea foam
+      Color(0xFFE0F2FE), // Very light blue
+      Color(0xFFF0F9FF), // Ice blue
+    ],
+  );
+
+  static const LinearGradient buttonGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xFF1E40AF), // Deep blue
+      Color(0xFF3B82F6), // Ocean blue
+    ],
+  );
+
+  static const LinearGradient accentGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xFF0F766E), // Teal
+      Color(0xFF14B8A6), // Sea green
+    ],
+  );
+
   // Responsive design helpers
   double _getResponsiveFontSize(double width, {double baseSize = 16.0}) {
     if (width < 480) return baseSize - 2;
@@ -192,41 +233,25 @@ class _ShoppingScreenState extends State<ShoppingScreen>
     _removeOverlay();
 
     try {
-      final querySnapshot = await FirebaseFirestore.instance
+      // Always add as a new cart item - don't check for existing items
+      // This allows users to add the same product multiple times
+      await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
           .collection('cart')
-          .where('name', isEqualTo: productName)
-          .where('sellerId', isEqualTo: sellerId)
-          .limit(1)
-          .get();
-
-      if (querySnapshot.docs.isNotEmpty) {
-        await querySnapshot.docs.first.reference.update({
-          'quantity': FieldValue.increment(1),
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('$productName quantity increased')),
-        );
-      } else {
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .collection('cart')
-            .add({
-          'name': productName,
-          'price': productPrice,
-          'image': productImage,
-          'sellerName': sellerName,
-          'sellerContact': sellerContact,
-          'sellerId': sellerId,
-          'quantity': 1,
-          'createdAt': FieldValue.serverTimestamp(),
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('$productName added to cart')),
-        );
-      }
+          .add({
+        'name': productName,
+        'price': productPrice,
+        'image': productImage,
+        'sellerName': sellerName,
+        'sellerContact': sellerContact,
+        'sellerId': sellerId,
+        'quantity': 1,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('$productName added to cart')),
+      );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to add to cart: ${e.toString()}')),
@@ -736,8 +761,16 @@ class _ShoppingScreenState extends State<ShoppingScreen>
       margin: EdgeInsets.only(bottom: spacing),
       padding: EdgeInsets.all(padding),
       decoration: BoxDecoration(
+        color: Colors.white,
         border: Border.all(color: Colors.grey.shade300),
         borderRadius: BorderRadius.circular(10),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -917,293 +950,353 @@ class _ShoppingScreenState extends State<ShoppingScreen>
     return Scaffold(
       key: _scaffoldKey,
       drawer: _buildDrawer(),
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        iconTheme: const IconThemeData(color: Colors.black),
-        elevation: 0,
-        toolbarHeight: toolbarHeight,
-        leading: IconButton(
-          icon: Icon(Icons.menu, size: _getResponsiveIconSize(screenWidth)),
-          onPressed: () => _scaffoldKey.currentState?.openDrawer(),
-        ),
-        title: Row(
-          children: [
-            GestureDetector(
-              onTap: () {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => HomePage(userType: widget.userType),
-                  ),
-                );
-              },
-              child: Image.asset(
-                'assets/images/logo.png',
-                height: logoHeight,
+      body: Column(
+        children: [
+          // Custom AppBar with white background
+          Container(
+            decoration: const BoxDecoration(color: Colors.white),
+            child: SafeArea(
+              child: Container(
+                padding: EdgeInsets.symmetric(horizontal: bodyPadding, vertical: 8),
+                child: Row(
+                  children: [
+                    IconButton(
+                      icon: Icon(Icons.menu, color: Color(0xFF1976D2), size: _getResponsiveIconSize(screenWidth)),
+                      onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+                    ),
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => HomePage(userType: widget.userType),
+                          ),
+                        );
+                      },
+                      child: Image.asset(
+                        'assets/images/logo1.jpg',
+                        height: logoHeight,
+                      ),
+                    ),
+                    const Spacer(),
+                    IconButton(
+                      icon: Icon(Icons.shopping_bag_outlined, color: Color(0xFF1976D2), size: _getResponsiveIconSize(screenWidth)),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                ShoppingScreen(userType: widget.userType),
+                          ),
+                        );
+                      },
+                    ),
+                    StreamBuilder<List<QuerySnapshot>>(
+                      stream: CombineLatestStream.list([
+                        FirebaseFirestore.instance
+                            .collection('users')
+                            .doc(FirebaseAuth.instance.currentUser?.uid)
+                            .collection('cart')
+                            .snapshots(),
+                        FirebaseFirestore.instance
+                            .collection('users')
+                            .doc(FirebaseAuth.instance.currentUser?.uid)
+                            .collection('orders')
+                            .where('status', isNotEqualTo: 'Cancelled')
+                            .snapshots(),
+                      ]),
+                      builder: (context, snapshot) {
+                        int cartCount = 0;
+                        if (snapshot.hasData) {
+                          final cartItems = snapshot.data![0].docs;
+                          final orders = snapshot.data![1].docs;
+                          
+                          // Filter out cart items that have been ordered
+                          for (var cartDoc in cartItems) {
+                            final cartData = cartDoc.data() as Map<String, dynamic>;
+                            final cartDocId = cartDoc.id;
+                            final productName = cartData['name'];
+                            final sellerId = cartData['sellerId'];
+                            
+                            // Check if this cart item has been ordered
+                            bool isOrdered = false;
+                            for (var orderDoc in orders) {
+                              final orderData = orderDoc.data() as Map<String, dynamic>;
+                              final orderCartDocId = orderData['cartDocId'];
+                              final orderProductName = orderData['productName'];
+                              final orderSellerId = orderData['sellerId'];
+                              final orderStatus = orderData['status'];
+                              
+                              // Check if this order matches the cart item
+                              // Only check for exact cartDocId match - don't filter based on previous orders
+                              if (orderCartDocId == cartDocId) {
+                                if (orderStatus == 'Accepted') {
+                                  isOrdered = true;
+                                  break;
+                                }
+                              }
+                            }
+                            
+                            if (!isOrdered) {
+                              cartCount++;
+                            }
+                          }
+                        }
+                        return Stack(
+                          key: cartIconKey,
+                          children: [
+                            IconButton(
+                              icon: Icon(Icons.shopping_cart_outlined, color: Color(0xFF1976D2), size: _getResponsiveIconSize(screenWidth)),
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        AddToCart(userType: widget.userType),
+                                  ),
+                                );
+                              },
+                            ),
+                            if (cartCount > 0)
+                              Positioned(
+                                right: screenWidth < 480 ? 6 : 8,
+                                top: screenWidth < 480 ? 6 : 8,
+                                child: Container(
+                                  padding: EdgeInsets.all(screenWidth < 480 ? 1 : 2),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red,
+                                    borderRadius: BorderRadius.circular(screenWidth < 480 ? 8 : 10),
+                                  ),
+                                  constraints: BoxConstraints(
+                                    minWidth: screenWidth < 480 ? 14 : 16,
+                                    minHeight: screenWidth < 480 ? 14 : 16,
+                                  ),
+                                  child: Text(
+                                    '$cartCount',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: screenWidth < 480 ? 8 : 10,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        );
+                      },
+                    ),
+                    StreamBuilder<List<QuerySnapshot>>(
+                      stream: CombineLatestStream.list([
+                        FirebaseFirestore.instance
+                            .collection('notifications')
+                            .where('userId', isEqualTo: FirebaseAuth.instance.currentUser?.uid)
+                            .where('isRead', isEqualTo: false)
+                            .snapshots(),
+                        FirebaseFirestore.instance
+                            .collection('sellers_notification')
+                            .where('userId', isEqualTo: FirebaseAuth.instance.currentUser?.uid)
+                            .where('isRead', isEqualTo: false)
+                            .snapshots(),
+                      ]),
+                      builder: (context, snapshot) {
+                        int notificationCount = 0;
+                        if (snapshot.hasData) {
+                          notificationCount = snapshot.data![0].docs.length + snapshot.data![1].docs.length;
+                        }
+                        return Stack(
+                          children: [
+                            IconButton(
+                              icon: Icon(Icons.notifications_none, color: Color(0xFF1976D2), size: _getResponsiveIconSize(screenWidth)),
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        NotificationScreen(userType: widget.userType),
+                                  ),
+                                );
+                              },
+                            ),
+                            if (notificationCount > 0)
+                              Positioned(
+                                right: screenWidth < 480 ? 6 : 8,
+                                top: screenWidth < 480 ? 6 : 8,
+                                child: Container(
+                                  padding: EdgeInsets.all(screenWidth < 480 ? 1 : 2),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red,
+                                    borderRadius: BorderRadius.circular(screenWidth < 480 ? 8 : 10),
+                                  ),
+                                  constraints: BoxConstraints(
+                                    minWidth: screenWidth < 480 ? 14 : 16,
+                                    minHeight: screenWidth < 480 ? 14 : 16,
+                                  ),
+                                  child: Text(
+                                    '$notificationCount',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: screenWidth < 480 ? 8 : 10,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        );
+                      },
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.person_outline, color: Color(0xFF1976D2), size: _getResponsiveIconSize(screenWidth)),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                ProfileScreen(userType: widget.userType),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
               ),
             ),
-            const Spacer(),
-            IconButton(
-              icon: Icon(Icons.shopping_bag_outlined, color: Colors.black, size: _getResponsiveIconSize(screenWidth)),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) =>
-                        ShoppingScreen(userType: widget.userType),
-                  ),
-                );
-              },
-            ),
-            StreamBuilder<List<QuerySnapshot>>(
-              stream: CombineLatestStream.list([
-                FirebaseFirestore.instance
-                    .collection('users')
-                    .doc(FirebaseAuth.instance.currentUser?.uid)
-                    .collection('cart')
-                    .snapshots(),
-                FirebaseFirestore.instance
-                    .collection('users')
-                    .doc(FirebaseAuth.instance.currentUser?.uid)
-                    .collection('orders')
-                    .where('status', isNotEqualTo: 'Cancelled')
-                    .snapshots(),
-              ]),
-              builder: (context, snapshot) {
-                int cartCount = 0;
-                if (snapshot.hasData) {
-                  final cartItems = snapshot.data![0].docs;
-                  final orders = snapshot.data![1].docs;
-                  
-                  // Filter out cart items that have been ordered
-                  for (var cartDoc in cartItems) {
-                    final cartData = cartDoc.data() as Map<String, dynamic>;
-                    final cartDocId = cartDoc.id;
-                    final productName = cartData['name'];
-                    final sellerId = cartData['sellerId'];
-                    
-                    // Check if this cart item has been ordered
-                    bool isOrdered = false;
-                    for (var orderDoc in orders) {
-                      final orderData = orderDoc.data() as Map<String, dynamic>;
-                      final orderCartDocId = orderData['cartDocId'];
-                      final orderProductName = orderData['productName'];
-                      final orderSellerId = orderData['sellerId'];
-                      final orderStatus = orderData['status'];
-                      
-                      // Check if this order matches the cart item
-                      if ((orderCartDocId == cartDocId) || 
-                          (orderProductName == productName && orderSellerId == sellerId)) {
-                        if (orderStatus == 'Accepted') {
-                          isOrdered = true;
-                          break;
-                        }
-                      }
-                    }
-                    
-                    if (!isOrdered) {
-                      cartCount++;
-                    }
-                  }
-                }
-                return Stack(
-                  key: cartIconKey,
-                  children: [
-                    IconButton(
-                      icon: Icon(Icons.shopping_cart_outlined, color: Colors.black, size: _getResponsiveIconSize(screenWidth)),
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) =>
-                                AddToCart(userType: widget.userType),
-                          ),
-                        );
-                      },
-                    ),
-                    if (cartCount > 0)
-                      Positioned(
-                        right: screenWidth < 480 ? 6 : 8,
-                        top: screenWidth < 480 ? 6 : 8,
-                        child: Container(
-                          padding: EdgeInsets.all(screenWidth < 480 ? 1 : 2),
-                          decoration: BoxDecoration(
-                            color: Colors.red,
-                            borderRadius: BorderRadius.circular(screenWidth < 480 ? 8 : 10),
-                          ),
-                          constraints: BoxConstraints(
-                            minWidth: screenWidth < 480 ? 14 : 16,
-                            minHeight: screenWidth < 480 ? 14 : 16,
-                          ),
-                          child: Text(
-                            '$cartCount',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: screenWidth < 480 ? 8 : 10,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      ),
-                  ],
-                );
-              },
-            ),
-            StreamBuilder<List<QuerySnapshot>>(
-              stream: CombineLatestStream.list([
-                FirebaseFirestore.instance
-                    .collection('notifications')
-                    .where('userId', isEqualTo: FirebaseAuth.instance.currentUser?.uid)
-                    .where('isRead', isEqualTo: false)
-                    .snapshots(),
-                FirebaseFirestore.instance
-                    .collection('sellers_notification')
-                    .where('userId', isEqualTo: FirebaseAuth.instance.currentUser?.uid)
-                    .where('isRead', isEqualTo: false)
-                    .snapshots(),
-              ]),
-              builder: (context, snapshot) {
-                int notificationCount = 0;
-                if (snapshot.hasData) {
-                  notificationCount = snapshot.data![0].docs.length + snapshot.data![1].docs.length;
-                }
-                return Stack(
-                  children: [
-                    IconButton(
-                      icon: Icon(Icons.notifications_none, color: Colors.black, size: _getResponsiveIconSize(screenWidth)),
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) =>
-                                NotificationScreen(userType: widget.userType),
-                          ),
-                        );
-                      },
-                    ),
-                    if (notificationCount > 0)
-                      Positioned(
-                        right: screenWidth < 480 ? 6 : 8,
-                        top: screenWidth < 480 ? 6 : 8,
-                        child: Container(
-                          padding: EdgeInsets.all(screenWidth < 480 ? 1 : 2),
-                          decoration: BoxDecoration(
-                            color: Colors.red,
-                            borderRadius: BorderRadius.circular(screenWidth < 480 ? 8 : 10),
-                          ),
-                          constraints: BoxConstraints(
-                            minWidth: screenWidth < 480 ? 14 : 16,
-                            minHeight: screenWidth < 480 ? 14 : 16,
-                          ),
-                          child: Text(
-                            '$notificationCount',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: screenWidth < 480 ? 8 : 10,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      ),
-                  ],
-                );
-              },
-            ),
-            IconButton(
-              icon: Icon(Icons.person_outline, color: Colors.black, size: _getResponsiveIconSize(screenWidth)),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) =>
-                        ProfileScreen(userType: widget.userType),
-                  ),
-                );
-              },
-            ),
-          ],
-        ),
-      ),
-      body: Stack(
-        children: [
-          Positioned.fill(
-            child: SingleChildScrollView(
-              padding: EdgeInsets.all(bodyPadding),
-              child: Column(
+          ),
+          Expanded(
+            child: Container(
+              decoration: const BoxDecoration(gradient: oceanGradient),
+              child: Stack(
                 children: [
-                  StreamBuilder<QuerySnapshot>(
-                    stream: FirebaseFirestore.instance
-                        .collection('products')
-                        .orderBy('createdAt', descending: true)
-                        .snapshots(),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
-                      if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                        return Center(
-                          child: Text(
-                            'No products available.',
-                            style: TextStyle(fontSize: _getResponsiveFontSize(screenWidth, baseSize: 18.0)),
-                          ),
-                        );
-                      }
-                      final currentUser = FirebaseAuth.instance.currentUser;
-                      return ListView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: snapshot.data!.docs.length,
-                        itemBuilder: (context, index) {
-                          final doc = snapshot.data!.docs[index];
-                          final isMine = currentUser != null && currentUser.uid == doc['sellerId'];
-                          return FutureBuilder<String?>(
-                            future: _getFishermanProfileImageUrl(doc['sellerId']),
-                            builder: (context, profileSnapshot) {
-                              return _buildProductCard(
-                                context,
-                                image: doc['image'],
-                                name: doc['name'],
-                                price: doc['price'],
-                                sellerName: doc['sellerName'],
-                                sellerContact: doc['sellerContact'],
-                                sellerId: doc['sellerId'],
-                                sellerProfileUrl: profileSnapshot.data,
-                                isMine: isMine,
-                                productId: doc.id,
+                  Positioned.fill(
+                    child: SingleChildScrollView(
+                      padding: EdgeInsets.all(bodyPadding),
+                      child: Column(
+                        children: [
+                          StreamBuilder<QuerySnapshot>(
+                            stream: FirebaseFirestore.instance
+                                .collection('products')
+                                .orderBy('createdAt', descending: true)
+                                .snapshots(),
+                            builder: (context, snapshot) {
+                              if (snapshot.connectionState == ConnectionState.waiting) {
+                                return const Center(child: CircularProgressIndicator());
+                              }
+                              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                                return Center(
+                                  child: Container(
+                                    margin: const EdgeInsets.all(24),
+                                    padding: const EdgeInsets.all(32),
+                                    decoration: BoxDecoration(
+                                      gradient: cardGradient,
+                                      borderRadius: BorderRadius.circular(20),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.1),
+                                          blurRadius: 15,
+                                          offset: const Offset(0, 8),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.all(16),
+                                          decoration: BoxDecoration(
+                                            gradient: oceanGradient,
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: const Icon(Icons.inventory_2, size: 60, color: Colors.white),
+                                        ),
+                                        const SizedBox(height: 18),
+                                        Text(
+                                          'No products available.',
+                                          style: TextStyle(
+                                            fontSize: _getResponsiveFontSize(screenWidth, baseSize: 18.0),
+                                            color: Colors.grey[700],
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                          textAlign: TextAlign.center,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              }
+                              final currentUser = FirebaseAuth.instance.currentUser;
+                              return ListView.builder(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                itemCount: snapshot.data!.docs.length,
+                                itemBuilder: (context, index) {
+                                  final doc = snapshot.data!.docs[index];
+                                  final isMine = currentUser != null && currentUser.uid == doc['sellerId'];
+                                  return FutureBuilder<String?>(
+                                    future: _getFishermanProfileImageUrl(doc['sellerId']),
+                                    builder: (context, profileSnapshot) {
+                                      return _buildProductCard(
+                                        context,
+                                        image: doc['image'],
+                                        name: doc['name'],
+                                        price: doc['price'],
+                                        sellerName: doc['sellerName'],
+                                        sellerContact: doc['sellerContact'],
+                                        sellerId: doc['sellerId'],
+                                        sellerProfileUrl: profileSnapshot.data,
+                                        isMine: isMine,
+                                        productId: doc.id,
+                                      );
+                                    },
+                                  );
+                                },
                               );
                             },
-                          );
-                        },
-                      );
-                    },
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
+                  if (widget.userType == 'fisherman')
+                    Positioned(
+                      bottom: screenWidth < 480 ? 16 : 24,
+                      right: screenWidth < 480 ? 16 : 24,
+                      child: IgnorePointer(
+                        ignoring: _isUploading,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            gradient: buttonGradient,
+                            borderRadius: BorderRadius.circular(28),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.2),
+                                blurRadius: 12,
+                                offset: const Offset(0, 6),
+                              ),
+                            ],
+                          ),
+                          child: FloatingActionButton.extended(
+                            heroTag: 'upload_button',
+                            icon: Icon(Icons.upload, size: _getResponsiveIconSize(screenWidth), color: Colors.white),
+                            label: Text('Upload', style: TextStyle(fontSize: _getResponsiveFontSize(screenWidth, baseSize: 14.0), color: Colors.white)),
+                            onPressed: _isUploading ? null : _showUploadDialog,
+                            backgroundColor: Colors.transparent,
+                            elevation: 0,
+                          ),
+                        ),
+                      ),
+                    ),
+                  if (_isUploading)
+                    Positioned(
+                      bottom: screenWidth < 480 ? 80 : 100,
+                      right: screenWidth < 480 ? 28 : 36,
+                      child: CircularProgressIndicator(
+                        strokeWidth: screenWidth < 480 ? 2 : 3,
+                      ),
+                    ),
                 ],
               ),
             ),
           ),
-          if (widget.userType == 'fisherman')
-            Positioned(
-              bottom: screenWidth < 480 ? 16 : 24,
-              right: screenWidth < 480 ? 16 : 24,
-              child: IgnorePointer(
-                ignoring: _isUploading,
-                child: FloatingActionButton.extended(
-                  heroTag: 'upload_button',
-                  icon: Icon(Icons.upload, size: _getResponsiveIconSize(screenWidth)),
-                  label: Text('Upload', style: TextStyle(fontSize: _getResponsiveFontSize(screenWidth, baseSize: 14.0))),
-                  onPressed: _isUploading ? null : _showUploadDialog,
-                  backgroundColor: Colors.white,
-                ),
-              ),
-            ),
-          if (_isUploading)
-            Positioned(
-              bottom: screenWidth < 480 ? 80 : 100,
-              right: screenWidth < 480 ? 28 : 36,
-              child: CircularProgressIndicator(
-                strokeWidth: screenWidth < 480 ? 2 : 3,
-              ),
-            ),
         ],
       ),
     );

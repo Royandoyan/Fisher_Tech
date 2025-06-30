@@ -5,6 +5,47 @@ import 'selection_loginsignup.dart';
 class SelectionScreen extends StatelessWidget {
   const SelectionScreen({super.key});
 
+  // Light ocean gradient to highlight the logo
+  static const LinearGradient oceanGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xFFe0f7fa), // Light aqua
+      Color(0xFFb3e5fc), // Pale blue
+      Color(0xFF81d4fa), // Soft blue
+      Color(0xFFb2ebf2), // Light teal
+      Color(0xFFe1f5fe), // Very light blue
+    ],
+  );
+
+  static const LinearGradient cardGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xFFF8FAFC), // Light sea foam
+      Color(0xFFE0F2FE), // Very light blue
+      Color(0xFFF0F9FF), // Ice blue
+    ],
+  );
+
+  static const LinearGradient buttonGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xFF1E40AF), // Deep blue
+      Color(0xFF3B82F6), // Ocean blue
+    ],
+  );
+
+  static const LinearGradient accentGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xFF0F766E), // Teal
+      Color(0xFF14B8A6), // Sea green
+    ],
+  );
+
   @override
   Widget build(BuildContext context) {
     // Get screen dimensions for responsive design
@@ -59,105 +100,150 @@ class SelectionScreen extends StatelessWidget {
     }
 
     return Scaffold(
-      backgroundColor: Colors.grey[200],
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: EdgeInsets.symmetric(
-              horizontal: horizontalPadding,
-              vertical: verticalPadding,
-            ),
-            child: Container(
-              width: containerWidth,
-              constraints: BoxConstraints(
-                maxWidth: 450,
-                minHeight: screenHeight * 0.4,
+      body: Container(
+        decoration: const BoxDecoration(gradient: oceanGradient),
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: EdgeInsets.symmetric(
+                horizontal: horizontalPadding,
+                vertical: verticalPadding,
               ),
-              padding: EdgeInsets.all(horizontalPadding),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.blueGrey, width: 1),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.withOpacity(0.1),
-                    spreadRadius: 1,
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Image.asset(
-                    'assets/images/logo.png',
-                    height: logoSize,
-                  ),
-                  SizedBox(height: spacing * 0.8),
-                  Text(
-                    'Fisher Tech',
-                    style: GoogleFonts.parisienne(
-                      fontSize: titleFontSize + 4,
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFF243B5E),
-                      letterSpacing: 0.5,
+              child: Container(
+                width: containerWidth,
+                constraints: BoxConstraints(
+                  maxWidth: 450,
+                  minHeight: screenHeight * 0.4,
+                ),
+                padding: EdgeInsets.all(horizontalPadding),
+                decoration: BoxDecoration(
+                  gradient: cardGradient,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.15),
+                      spreadRadius: 2,
+                      blurRadius: 20,
+                      offset: const Offset(0, 8),
                     ),
-                  ),
-                  SizedBox(height: spacing * 1.5),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF243B5E),
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        padding: EdgeInsets.symmetric(vertical: fontSize + 2),
-                      ),
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const SelectionLoginSignup(userType: 'fisherman'),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // Logo with gradient background
+                    Container(
+                      width: logoSize,
+                      height: logoSize,
+                      decoration: BoxDecoration(
+                        gradient: buttonGradient,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.2),
+                            blurRadius: 12,
+                            offset: const Offset(0, 6),
                           ),
-                        );
-                      },
-                      child: Text(
-                        'Fisherman',
-                        style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.bold),
+                        ],
                       ),
-                    ),
-                  ),
-                  SizedBox(height: spacing * 0.8),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF243B5E),
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(6),
+                      child: ClipOval(
+                        child: Image.asset(
+                          'assets/images/logo1.jpg',
+                          width: logoSize,
+                          height: logoSize,
+                          fit: BoxFit.cover,
                         ),
-                        padding: EdgeInsets.symmetric(vertical: fontSize + 2),
-                      ),
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const SelectionLoginSignup(userType: 'customer'),
-                          ),
-                        );
-                      },
-                      child: Text(
-                        'Customer',
-                        style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.bold),
                       ),
                     ),
-                  ),
-                ],
+                    SizedBox(height: spacing * 0.8),
+                    Text(
+                      'Fisher Tech',
+                      style: GoogleFonts.parisienne(
+                        fontSize: titleFontSize + 4,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF243B5E),
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    SizedBox(height: spacing * 1.5),
+                    Container(
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        gradient: buttonGradient,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.2),
+                            blurRadius: 12,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
+                      ),
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.transparent,
+                          foregroundColor: Colors.white,
+                          shadowColor: Colors.transparent,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: EdgeInsets.symmetric(vertical: fontSize + 6),
+                        ),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const SelectionLoginSignup(userType: 'fisherman'),
+                            ),
+                          );
+                        },
+                        child: Text(
+                          'Fisherman',
+                          style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: spacing * 0.8),
+                    Container(
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        gradient: accentGradient,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.2),
+                            blurRadius: 12,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
+                      ),
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.transparent,
+                          foregroundColor: Colors.white,
+                          shadowColor: Colors.transparent,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: EdgeInsets.symmetric(vertical: fontSize + 6),
+                        ),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const SelectionLoginSignup(userType: 'customer'),
+                            ),
+                          );
+                        },
+                        child: Text(
+                          'Customer',
+                          style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
