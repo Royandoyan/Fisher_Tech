@@ -624,7 +624,6 @@ class _HomePageState extends State<HomePage> {
         return;
       }
 
-      // Prepare metadata
       final metadata = {
         'name': _selectedFile!.name,
         'size': _selectedFile!.size,
@@ -724,8 +723,9 @@ class _HomePageState extends State<HomePage> {
         builder: (_) => const Center(child: CircularProgressIndicator()),
       );
 
-      if (['.mp4', '.mov', '.avi', '.mkv']
-          .any((ext) => lowerExtension.contains(ext))) {
+      if ([
+        '.mp4', '.mov', '.avi', '.mkv'
+      ].any((ext) => lowerExtension.contains(ext))) {
         // Handle videos
         Navigator.pop(context); // Remove loading dialog
         Navigator.push(
@@ -744,8 +744,13 @@ class _HomePageState extends State<HomePage> {
             builder: (context) => PdfViewerScreen(pdfUrl: url, title: title),
           ),
         );
+      } else if (lowerExtension.contains('.doc') || lowerExtension.contains('.docx')) {
+        // Handle Word docs: open in new browser tab using Office Online
+        Navigator.pop(context); // Remove loading dialog
+        final viewerUrl = 'https://view.officeapps.live.com/op/embed.aspx?src=${Uri.encodeComponent(url)}';
+        await launchUrl(Uri.parse(viewerUrl), mode: LaunchMode.externalApplication);
       } else {
-        // Handle other document types (Word, Excel, etc.)
+        // Handle other document types (Excel, PowerPoint, etc.)
         Navigator.pop(context); // Remove loading dialog
         Navigator.push(
           context,
@@ -1202,7 +1207,9 @@ class _HomePageState extends State<HomePage> {
         }
         final docs = snapshot.data!.docs.where((doc) {
           final data = doc.data()! as Map<String, dynamic>;
-          final title = (data['title'] ?? '').toString().toLowerCase();
+          final title = (data['title'] != null && data['title'].toString().trim().isNotEmpty)
+              ? data['title'].toString()
+              : 'No Title';
           return _mainSearchText.isEmpty || title.contains(_mainSearchText);
         }).toList();
 
@@ -1213,73 +1220,403 @@ class _HomePageState extends State<HomePage> {
           );
         }
 
+        // Restore to horizontal scrollable Row for file cards
         return SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(
             children: docs.map((doc) {
               final data = doc.data()! as Map<String, dynamic>;
-              final title = (data['title'] ?? 'No Title').toString();
+              final title = (data['title'] != null && data['title'].toString().trim().isNotEmpty)
+                  ? data['title'].toString()
+                  : 'No Title';
               final metadata = data['metadata'] ?? {};
               final url = metadata['url'] ?? '';
               final extension = metadata['extension'] ?? '';
               final isVideo = extension.toString().contains('.mp4') || extension.toString().contains('.mov');
-              return GestureDetector(
-                onTap: () async {
-                  String viewerUrl;
-                  if (extension == '.pdf') {
-                    viewerUrl = 'https://docs.google.com/gview?embedded=true&url=${Uri.encodeComponent(url)}';
-                  } else if ([
-                    '.doc',
-                    '.docx',
-                    '.xls',
-                    '.xlsx',
-                    '.ppt',
-                    '.pptx'
-                  ].contains(extension)) {
-                    viewerUrl = 'https://view.officeapps.live.com/op/embed.aspx?src=${Uri.encodeComponent(url)}';
-                  } else {
-                    viewerUrl = url;
-                  }
-                  final uri = Uri.parse(viewerUrl);
-                  if (await canLaunchUrl(uri)) {
-                    await launchUrl(uri, mode: LaunchMode.externalApplication);
-                  } else {
-                    ScaffoldMessenger.of(context)
-                        .showSnackBar(const SnackBar(content: Text('Could not launch document')));
-                  }
-                },
-                child: Container(
-                  width: cardWidth,
-                  height: containerHeight,
-                  margin: const EdgeInsets.only(right: 8),
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: Colors.deepPurple.shade50,
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: Colors.deepPurple.shade100),
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        isVideo ? Icons.videocam : Icons.insert_drive_file,
-                        size: iconSize,
-                        color: Colors.deepPurple,
-                      ),
-                      const SizedBox(height: 2),
-                      Flexible(
-                        child: Text(
-                          title,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: bodyFontSize,
+              final isOwner = widget.userType == 'fisherman' && data['uid'] == _auth.currentUser?.uid;
+              return SizedBox(
+                width: cardWidth,
+                height: containerHeight + 56, // Add extra for title/buttons
+                child: Card(
+                  elevation: 2,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  child: GestureDetector(
+                    onTap: () {
+                      _openInAppViewer(url, extension, title);
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        mainAxisSize: MainAxisSize.max,
+                        children: [
+                          // File image
+                          Container(
+                            width: cardWidth * 0.9,
+                            height: containerHeight * 0.6,
+                            child: Image.asset('assets/images/File.png', fit: BoxFit.contain),
                           ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                          // Title area with fixed height
+                          SizedBox(
+                            height: 36,
+                            child: Center(
+                              child: Text(
+                                title,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(fontWeight: FontWeight.w600, fontSize: bodyFontSize),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ),
+                          // Edit/Delete row (if owner)
+                          if (isOwner)
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                IconButton(
+                                  icon: Icon(Icons.edit, color: Colors.blue, size: iconSize - 2),
+                                  tooltip: 'Edit Title',
+                                  onPressed: () async {
+                                    final newTitle = await showDialog<String>(
+                                      context: context,
+                                      builder: (context) {
+                                        final controller = TextEditingController(text: title);
+                                        final screenWidth = MediaQuery.of(context).size.width;
+                                        final dialogWidth = screenWidth < 480 ? screenWidth * 0.9 : screenWidth < 768 ? 400.0 : 500.0;
+                                        return Dialog(
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                          child: Container(
+                                            width: dialogWidth,
+                                            padding: EdgeInsets.all(screenWidth < 480 ? 16 : 24),
+                                            decoration: BoxDecoration(
+                                              gradient: oceanGradient,
+                                              borderRadius: BorderRadius.circular(16),
+                                            ),
+                                            child: Column(
+                                              mainAxisSize: MainAxisSize.min,
+                                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                                              children: [
+                                                Container(
+                                                  padding: EdgeInsets.symmetric(vertical: 10),
+                                                  child: Text(
+                                                    'Edit Title/Purpose',
+                                                    style: TextStyle(
+                                                      fontWeight: FontWeight.bold,
+                                                      fontSize: 18,
+                                                      color: Colors.blue.shade900,
+                                                      letterSpacing: 0.5,
+                                                    ),
+                                                    textAlign: TextAlign.center,
+                                                  ),
+                                                ),
+                                                SizedBox(height: 16),
+                                                Container(
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.white,
+                                                    borderRadius: BorderRadius.circular(8),
+                                                  ),
+                                                  child: TextField(
+                                                    controller: controller,
+                                                    decoration: InputDecoration(
+                                                      labelText: 'Title/Purpose',
+                                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                                                    ),
+                                                    style: TextStyle(fontSize: 16),
+                                                  ),
+                                                ),
+                                                SizedBox(height: 24),
+                                                Row(
+                                                  children: [
+                                                    Expanded(
+                                                      child: OutlinedButton(
+                                                        style: OutlinedButton.styleFrom(
+                                                          foregroundColor: Colors.blue.shade900,
+                                                          side: BorderSide(color: Colors.blue.shade900),
+                                                          backgroundColor: Colors.transparent,
+                                                        ),
+                                                        onPressed: () => Navigator.pop(context),
+                                                        child: Text('Cancel'),
+                                                      ),
+                                                    ),
+                                                    SizedBox(width: 12),
+                                                    Expanded(
+                                                      child: ElevatedButton(
+                                                        style: ElevatedButton.styleFrom(
+                                                          backgroundColor: Colors.blue.shade900,
+                                                          foregroundColor: Colors.white,
+                                                          elevation: 2,
+                                                          shape: RoundedRectangleBorder(
+                                                            borderRadius: BorderRadius.circular(8),
+                                                          ),
+                                                        ),
+                                                        onPressed: () => Navigator.pop(context, controller.text.trim()),
+                                                        child: Text('Save'),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    );
+                                    if (newTitle != null && newTitle.isNotEmpty && newTitle != title) {
+                                      await _firestore.collection(filesCollection).doc(doc.id).update({'title': newTitle});
+                                      await showDialog(
+                                        context: context,
+                                        builder: (context) {
+                                          final screenWidth = MediaQuery.of(context).size.width;
+                                          final dialogWidth = screenWidth < 480 ? screenWidth * 0.9 : 350.0;
+                                          return Dialog(
+                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                                            child: Container(
+                                              width: dialogWidth,
+                                              padding: EdgeInsets.symmetric(
+                                                horizontal: screenWidth < 480 ? 18 : 32,
+                                                vertical: screenWidth < 480 ? 24 : 32,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                gradient: oceanGradient,
+                                                borderRadius: BorderRadius.circular(24),
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: Colors.black.withOpacity(0.08),
+                                                    blurRadius: 16,
+                                                    offset: Offset(0, 6),
+                                                  ),
+                                                ],
+                                              ),
+                                              child: Column(
+                                                mainAxisSize: MainAxisSize.min,
+                                                crossAxisAlignment: CrossAxisAlignment.center,
+                                                children: [
+                                                  Icon(Icons.check_circle_rounded, color: Colors.green, size: screenWidth < 480 ? 56 : 72),
+                                                  SizedBox(height: screenWidth < 480 ? 14 : 20),
+                                                  Text(
+                                                    'Success!',
+                                                    style: TextStyle(
+                                                      fontWeight: FontWeight.bold,
+                                                      fontSize: screenWidth < 480 ? 20 : 24,
+                                                      color: Colors.blue.shade900,
+                                                      letterSpacing: 0.5,
+                                                    ),
+                                                    textAlign: TextAlign.center,
+                                                  ),
+                                                  SizedBox(height: 10),
+                                                  Text(
+                                                    'Your changes have been saved.',
+                                                    style: TextStyle(
+                                                      fontSize: screenWidth < 480 ? 15 : 17,
+                                                      color: Colors.blue.shade900,
+                                                    ),
+                                                    textAlign: TextAlign.center,
+                                                  ),
+                                                  SizedBox(height: screenWidth < 480 ? 18 : 28),
+                                                  SizedBox(
+                                                    width: double.infinity,
+                                                    child: ElevatedButton(
+                                                      style: ElevatedButton.styleFrom(
+                                                        backgroundColor: Colors.blue.shade900,
+                                                        foregroundColor: Colors.white,
+                                                        padding: EdgeInsets.symmetric(vertical: screenWidth < 480 ? 12 : 16),
+                                                        shape: RoundedRectangleBorder(
+                                                          borderRadius: BorderRadius.circular(12),
+                                                        ),
+                                                        textStyle: TextStyle(fontSize: screenWidth < 480 ? 16 : 18, fontWeight: FontWeight.bold),
+                                                      ),
+                                                      onPressed: () => Navigator.pop(context),
+                                                      child: Text('Okay'),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                      );
+                                    }
+                                  },
+                                ),
+                                IconButton(
+                                  icon: Icon(Icons.delete, color: Colors.red, size: iconSize - 2),
+                                  tooltip: 'Delete File',
+                                  onPressed: () async {
+                                    final screenWidth = MediaQuery.of(context).size.width;
+                                    final dialogWidth = screenWidth < 480 ? screenWidth * 0.9 : 350.0;
+                                    final confirm = await showDialog<bool>(
+                                      context: context,
+                                      builder: (context) {
+                                        return Dialog(
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                                          child: Container(
+                                            width: dialogWidth,
+                                            padding: EdgeInsets.symmetric(
+                                              horizontal: screenWidth < 480 ? 18 : 32,
+                                              vertical: screenWidth < 480 ? 24 : 32,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              gradient: oceanGradient,
+                                              borderRadius: BorderRadius.circular(24),
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: Colors.black.withOpacity(0.08),
+                                                  blurRadius: 16,
+                                                  offset: Offset(0, 6),
+                                                ),
+                                              ],
+                                            ),
+                                            child: Column(
+                                              mainAxisSize: MainAxisSize.min,
+                                              crossAxisAlignment: CrossAxisAlignment.center,
+                                              children: [
+                                                Icon(Icons.warning_amber_rounded, color: Colors.red.shade700, size: screenWidth < 480 ? 56 : 72),
+                                                SizedBox(height: screenWidth < 480 ? 14 : 20),
+                                                Text(
+                                                  'Delete File',
+                                                  style: TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: screenWidth < 480 ? 20 : 24,
+                                                    color: Colors.blue.shade900,
+                                                    letterSpacing: 0.5,
+                                                  ),
+                                                  textAlign: TextAlign.center,
+                                                ),
+                                                SizedBox(height: 10),
+                                                Text(
+                                                  'Are you sure you want to delete this file? This action cannot be undone.',
+                                                  style: TextStyle(
+                                                    fontSize: screenWidth < 480 ? 15 : 17,
+                                                    color: Colors.blue.shade900,
+                                                  ),
+                                                  textAlign: TextAlign.center,
+                                                ),
+                                                SizedBox(height: screenWidth < 480 ? 18 : 28),
+                                                Row(
+                                                  children: [
+                                                    Expanded(
+                                                      child: OutlinedButton(
+                                                        style: OutlinedButton.styleFrom(
+                                                          foregroundColor: Colors.blue.shade900,
+                                                          side: BorderSide(color: Colors.blue.shade900),
+                                                          backgroundColor: Colors.transparent,
+                                                          padding: EdgeInsets.symmetric(vertical: screenWidth < 480 ? 12 : 16),
+                                                          textStyle: TextStyle(fontSize: screenWidth < 480 ? 16 : 18, fontWeight: FontWeight.bold),
+                                                        ),
+                                                        onPressed: () => Navigator.pop(context, false),
+                                                        child: Text('Cancel'),
+                                                      ),
+                                                    ),
+                                                    SizedBox(width: 16),
+                                                    Expanded(
+                                                      child: ElevatedButton(
+                                                        style: ElevatedButton.styleFrom(
+                                                          backgroundColor: Colors.red.shade700,
+                                                          foregroundColor: Colors.white,
+                                                          padding: EdgeInsets.symmetric(vertical: screenWidth < 480 ? 12 : 16),
+                                                          shape: RoundedRectangleBorder(
+                                                            borderRadius: BorderRadius.circular(12),
+                                                          ),
+                                                          textStyle: TextStyle(fontSize: screenWidth < 480 ? 16 : 18, fontWeight: FontWeight.bold),
+                                                        ),
+                                                        onPressed: () => Navigator.pop(context, true),
+                                                        child: Text('Delete'),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    );
+                                    if (confirm == true) {
+                                      await _firestore.collection(filesCollection).doc(doc.id).delete();
+                                      await showDialog(
+                                        context: context,
+                                        builder: (context) {
+                                          final screenWidth = MediaQuery.of(context).size.width;
+                                          final dialogWidth = screenWidth < 480 ? screenWidth * 0.9 : 350.0;
+                                          return Dialog(
+                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                                            child: Container(
+                                              width: dialogWidth,
+                                              padding: EdgeInsets.symmetric(
+                                                horizontal: screenWidth < 480 ? 18 : 32,
+                                                vertical: screenWidth < 480 ? 24 : 32,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                gradient: oceanGradient,
+                                                borderRadius: BorderRadius.circular(24),
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: Colors.black.withOpacity(0.08),
+                                                    blurRadius: 16,
+                                                    offset: Offset(0, 6),
+                                                  ),
+                                                ],
+                                              ),
+                                              child: Column(
+                                                mainAxisSize: MainAxisSize.min,
+                                                crossAxisAlignment: CrossAxisAlignment.center,
+                                                children: [
+                                                  Icon(Icons.delete_forever, color: Colors.red, size: screenWidth < 480 ? 56 : 72),
+                                                  SizedBox(height: screenWidth < 480 ? 14 : 20),
+                                                  Text(
+                                                    'Success!',
+                                                    style: TextStyle(
+                                                      fontWeight: FontWeight.bold,
+                                                      fontSize: screenWidth < 480 ? 20 : 24,
+                                                      color: Colors.blue.shade900,
+                                                      letterSpacing: 0.5,
+                                                    ),
+                                                    textAlign: TextAlign.center,
+                                                  ),
+                                                  SizedBox(height: 10),
+                                                  Text(
+                                                    'File deleted successfully!',
+                                                    style: TextStyle(
+                                                      fontSize: screenWidth < 480 ? 15 : 17,
+                                                      color: Colors.blue.shade900,
+                                                    ),
+                                                    textAlign: TextAlign.center,
+                                                  ),
+                                                  SizedBox(height: screenWidth < 480 ? 18 : 28),
+                                                  SizedBox(
+                                                    width: double.infinity,
+                                                    child: ElevatedButton(
+                                                      style: ElevatedButton.styleFrom(
+                                                        backgroundColor: Colors.blue.shade900,
+                                                        foregroundColor: Colors.white,
+                                                        padding: EdgeInsets.symmetric(vertical: screenWidth < 480 ? 12 : 16),
+                                                        shape: RoundedRectangleBorder(
+                                                          borderRadius: BorderRadius.circular(12),
+                                                        ),
+                                                        textStyle: TextStyle(fontSize: screenWidth < 480 ? 16 : 18, fontWeight: FontWeight.bold),
+                                                      ),
+                                                      onPressed: () => Navigator.pop(context),
+                                                      child: Text('Okay'),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                      );
+                                    }
+                                  },
+                                ),
+                              ],
+                            )
+                          else
+                            SizedBox(height: 36),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
               );
@@ -1308,8 +1645,10 @@ class _HomePageState extends State<HomePage> {
         }
         final videos = snapshot.data!.docs.where((doc) {
           final data = doc.data()! as Map<String, dynamic>;
-          final title = (data['title'] ?? '').toString().toLowerCase();
-          return _mainSearchText.isEmpty || title.contains(_mainSearchText);
+          final title = (data['title'] != null && data['title'].toString().trim().isNotEmpty)
+              ? data['title'].toString()
+              : 'No Title';
+          return _mainSearchText.isEmpty || title.toLowerCase().contains(_mainSearchText);
         }).toList();
 
         if (videos.isEmpty) {
@@ -1324,99 +1663,439 @@ class _HomePageState extends State<HomePage> {
           child: Row(
             children: videos.map((doc) {
               final data = doc.data()! as Map<String, dynamic>;
-              final title = (data['title'] ?? 'No Title').toString();
+              final title = (data['title'] != null && data['title'].toString().trim().isNotEmpty)
+                  ? data['title'].toString()
+                  : 'No Title';
               final metadata = data['metadata'] ?? {};
               final url = metadata['url'] ?? '';
-              return GestureDetector(
-                onTap: () => _openInAppViewer(url, '.mp4', title),
-                child: Container(
-                  width: cardWidth,
-                  height: containerHeight,
-                  margin: const EdgeInsets.only(right: 8),
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey.shade300),
-                    borderRadius: BorderRadius.circular(6),
-                    color: Colors.grey.shade100,
-                  ),
-                  child: FutureBuilder<String?>(
-                    future: _generateVideoThumbnail(url),
-                    builder: (context, thumbnailSnapshot) {
-                      return Stack(
+              final isOwner = widget.userType == 'fisherman' && data['uid'] == _auth.currentUser?.uid;
+              return SizedBox(
+                width: cardWidth,
+                height: containerHeight + 56, // Match file card height
+                child: Card(
+                  elevation: 2,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  child: GestureDetector(
+                    onTap: () {
+                      _openInAppViewer(url, '.mp4', title);
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        mainAxisSize: MainAxisSize.max,
                         children: [
-                          // Thumbnail or fallback
-                          if (thumbnailSnapshot.connectionState == ConnectionState.done && 
-                              thumbnailSnapshot.data != null)
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(4),
-                              child: Image.file(
-                                File(thumbnailSnapshot.data!),
-                                width: double.infinity,
-                                height: double.infinity,
-                                fit: BoxFit.cover,
-                              ),
-                            )
-                          else
-                            Container(
-                              width: double.infinity,
-                              height: double.infinity,
-                              decoration: BoxDecoration(
-                                color: Colors.grey.shade200,
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Icon(
-                                Icons.videocam,
-                                size: iconSize,
-                                color: Colors.grey.shade600,
-                              ),
-                            ),
-                          // Play button overlay
-                          Positioned.fill(
-                            child: Center(
-                              child: Container(
-                                padding: const EdgeInsets.all(3),
-                                decoration: BoxDecoration(
-                                  color: Colors.black.withOpacity(0.6),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Icon(
-                                  Icons.play_arrow,
-                                  size: iconSize - 4,
-                                  color: Colors.white,
-                                ),
-                              ),
+                          // Video thumbnail or icon
+                          Container(
+                            width: cardWidth * 0.9,
+                            height: containerHeight * 0.6,
+                            child: FutureBuilder<String?>(
+                              future: _generateVideoThumbnail(url),
+                              builder: (context, thumbnailSnapshot) {
+                                if (thumbnailSnapshot.connectionState == ConnectionState.done && thumbnailSnapshot.data != null) {
+                                  return Stack(
+                                    children: [
+                                      ClipRRect(
+                                        borderRadius: BorderRadius.circular(8),
+                                        child: Image.file(
+                                          File(thumbnailSnapshot.data!),
+                                          width: double.infinity,
+                                          height: double.infinity,
+                                          fit: BoxFit.cover,
+                                        ),
+                                      ),
+                                      Positioned.fill(
+                                        child: Center(
+                                          child: Image.asset(
+                                            'assets/images/play.png',
+                                            width: iconSize + 16,
+                                            height: iconSize + 16,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  );
+                                } else {
+                                  return Container(
+                                    width: double.infinity,
+                                    height: double.infinity,
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey.shade200,
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Center(
+                                      child: Image.asset(
+                                        'assets/images/play.png',
+                                        width: iconSize + 16,
+                                        height: iconSize + 16,
+                                      ),
+                                    ),
+                                  );
+                                }
+                              },
                             ),
                           ),
-                          // Title overlay at bottom
-                          Positioned(
-                            bottom: 0,
-                            left: 0,
-                            right: 0,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: Colors.black.withOpacity(0.7),
-                                borderRadius: const BorderRadius.only(
-                                  bottomLeft: Radius.circular(4),
-                                  bottomRight: Radius.circular(4),
-                                ),
-                              ),
+                          // Title area with fixed height
+                          SizedBox(
+                            height: 36,
+                            child: Center(
                               child: Text(
                                 title,
                                 textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w500,
-                                  fontSize: bodyFontSize - 1,
-                                  color: Colors.white,
-                                ),
-                                maxLines: 1,
+                                style: TextStyle(fontWeight: FontWeight.w600, fontSize: bodyFontSize),
+                                maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
                           ),
+                          // Edit/Delete row (if owner)
+                          if (isOwner)
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                IconButton(
+                                  icon: Icon(Icons.edit, color: Colors.blue, size: iconSize - 2),
+                                  tooltip: 'Edit Title',
+                                  onPressed: () async {
+                                    final newTitle = await showDialog<String>(
+                                      context: context,
+                                      builder: (context) {
+                                        final controller = TextEditingController(text: title);
+                                        final screenWidth = MediaQuery.of(context).size.width;
+                                        final dialogWidth = screenWidth < 480 ? screenWidth * 0.9 : screenWidth < 768 ? 400.0 : 500.0;
+                                        return Dialog(
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                          child: Container(
+                                            width: dialogWidth,
+                                            padding: EdgeInsets.all(screenWidth < 480 ? 16 : 24),
+                                            decoration: BoxDecoration(
+                                              gradient: oceanGradient,
+                                              borderRadius: BorderRadius.circular(16),
+                                            ),
+                                            child: Column(
+                                              mainAxisSize: MainAxisSize.min,
+                                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                                              children: [
+                                                Container(
+                                                  padding: EdgeInsets.symmetric(vertical: 10),
+                                                  child: Text(
+                                                    'Edit Title/Purpose',
+                                                    style: TextStyle(
+                                                      fontWeight: FontWeight.bold,
+                                                      fontSize: 18,
+                                                      color: Colors.blue.shade900,
+                                                      letterSpacing: 0.5,
+                                                    ),
+                                                    textAlign: TextAlign.center,
+                                                  ),
+                                                ),
+                                                SizedBox(height: 16),
+                                                Container(
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.white,
+                                                    borderRadius: BorderRadius.circular(8),
+                                                  ),
+                                                  child: TextField(
+                                                    controller: controller,
+                                                    decoration: InputDecoration(
+                                                      labelText: 'Title/Purpose',
+                                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                                                    ),
+                                                    style: TextStyle(fontSize: 16),
+                                                  ),
+                                                ),
+                                                SizedBox(height: 24),
+                                                Row(
+                                                  children: [
+                                                    Expanded(
+                                                      child: OutlinedButton(
+                                                        style: OutlinedButton.styleFrom(
+                                                          foregroundColor: Colors.blue.shade900,
+                                                          side: BorderSide(color: Colors.blue.shade900),
+                                                          backgroundColor: Colors.transparent,
+                                                        ),
+                                                        onPressed: () => Navigator.pop(context),
+                                                        child: Text('Cancel'),
+                                                      ),
+                                                    ),
+                                                    SizedBox(width: 12),
+                                                    Expanded(
+                                                      child: ElevatedButton(
+                                                        style: ElevatedButton.styleFrom(
+                                                          backgroundColor: Colors.blue.shade900,
+                                                          foregroundColor: Colors.white,
+                                                          elevation: 2,
+                                                          shape: RoundedRectangleBorder(
+                                                            borderRadius: BorderRadius.circular(8),
+                                                          ),
+                                                        ),
+                                                        onPressed: () => Navigator.pop(context, controller.text.trim()),
+                                                        child: Text('Save'),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    );
+                                    if (newTitle != null && newTitle.isNotEmpty && newTitle != title) {
+                                      await _firestore.collection(videosCollection).doc(doc.id).update({'title': newTitle});
+                                      await showDialog(
+                                        context: context,
+                                        builder: (context) {
+                                          final screenWidth = MediaQuery.of(context).size.width;
+                                          final dialogWidth = screenWidth < 480 ? screenWidth * 0.9 : 350.0;
+                                          return Dialog(
+                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                                            child: Container(
+                                              width: dialogWidth,
+                                              padding: EdgeInsets.symmetric(
+                                                horizontal: screenWidth < 480 ? 18 : 32,
+                                                vertical: screenWidth < 480 ? 24 : 32,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                gradient: oceanGradient,
+                                                borderRadius: BorderRadius.circular(24),
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: Colors.black.withOpacity(0.08),
+                                                    blurRadius: 16,
+                                                    offset: Offset(0, 6),
+                                                  ),
+                                                ],
+                                              ),
+                                              child: Column(
+                                                mainAxisSize: MainAxisSize.min,
+                                                crossAxisAlignment: CrossAxisAlignment.center,
+                                                children: [
+                                                  Icon(Icons.check_circle_rounded, color: Colors.green, size: screenWidth < 480 ? 56 : 72),
+                                                  SizedBox(height: screenWidth < 480 ? 14 : 20),
+                                                  Text(
+                                                    'Success!',
+                                                    style: TextStyle(
+                                                      fontWeight: FontWeight.bold,
+                                                      fontSize: screenWidth < 480 ? 20 : 24,
+                                                      color: Colors.blue.shade900,
+                                                      letterSpacing: 0.5,
+                                                    ),
+                                                    textAlign: TextAlign.center,
+                                                  ),
+                                                  SizedBox(height: 10),
+                                                  Text(
+                                                    'Your changes have been saved.',
+                                                    style: TextStyle(
+                                                      fontSize: screenWidth < 480 ? 15 : 17,
+                                                      color: Colors.blue.shade900,
+                                                    ),
+                                                    textAlign: TextAlign.center,
+                                                  ),
+                                                  SizedBox(height: screenWidth < 480 ? 18 : 28),
+                                                  SizedBox(
+                                                    width: double.infinity,
+                                                    child: ElevatedButton(
+                                                      style: ElevatedButton.styleFrom(
+                                                        backgroundColor: Colors.blue.shade900,
+                                                        foregroundColor: Colors.white,
+                                                        padding: EdgeInsets.symmetric(vertical: screenWidth < 480 ? 12 : 16),
+                                                        shape: RoundedRectangleBorder(
+                                                          borderRadius: BorderRadius.circular(12),
+                                                        ),
+                                                        textStyle: TextStyle(fontSize: screenWidth < 480 ? 16 : 18, fontWeight: FontWeight.bold),
+                                                      ),
+                                                      onPressed: () => Navigator.pop(context),
+                                                      child: Text('Okay'),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                      );
+                                    }
+                                  },
+                                ),
+                                IconButton(
+                                  icon: Icon(Icons.delete, color: Colors.red, size: iconSize - 2),
+                                  tooltip: 'Delete Video',
+                                  onPressed: () async {
+                                    final screenWidth = MediaQuery.of(context).size.width;
+                                    final dialogWidth = screenWidth < 480 ? screenWidth * 0.9 : 350.0;
+                                    final confirm = await showDialog<bool>(
+                                      context: context,
+                                      builder: (context) {
+                                        return Dialog(
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                                          child: Container(
+                                            width: dialogWidth,
+                                            padding: EdgeInsets.symmetric(
+                                              horizontal: screenWidth < 480 ? 18 : 32,
+                                              vertical: screenWidth < 480 ? 24 : 32,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              gradient: oceanGradient,
+                                              borderRadius: BorderRadius.circular(24),
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: Colors.black.withOpacity(0.08),
+                                                  blurRadius: 16,
+                                                  offset: Offset(0, 6),
+                                                ),
+                                              ],
+                                            ),
+                                            child: Column(
+                                              mainAxisSize: MainAxisSize.min,
+                                              crossAxisAlignment: CrossAxisAlignment.center,
+                                              children: [
+                                                Icon(Icons.warning_amber_rounded, color: Colors.red.shade700, size: screenWidth < 480 ? 56 : 72),
+                                                SizedBox(height: screenWidth < 480 ? 14 : 20),
+                                                Text(
+                                                  'Delete Video',
+                                                  style: TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: screenWidth < 480 ? 20 : 24,
+                                                    color: Colors.blue.shade900,
+                                                    letterSpacing: 0.5,
+                                                  ),
+                                                  textAlign: TextAlign.center,
+                                                ),
+                                                SizedBox(height: 10),
+                                                Text(
+                                                  'Are you sure you want to delete this video? This action cannot be undone.',
+                                                  style: TextStyle(
+                                                    fontSize: screenWidth < 480 ? 15 : 17,
+                                                    color: Colors.blue.shade900,
+                                                  ),
+                                                  textAlign: TextAlign.center,
+                                                ),
+                                                SizedBox(height: screenWidth < 480 ? 18 : 28),
+                                                Row(
+                                                  children: [
+                                                    Expanded(
+                                                      child: OutlinedButton(
+                                                        style: OutlinedButton.styleFrom(
+                                                          foregroundColor: Colors.blue.shade900,
+                                                          side: BorderSide(color: Colors.blue.shade900),
+                                                          backgroundColor: Colors.transparent,
+                                                          padding: EdgeInsets.symmetric(vertical: screenWidth < 480 ? 12 : 16),
+                                                          textStyle: TextStyle(fontSize: screenWidth < 480 ? 16 : 18, fontWeight: FontWeight.bold),
+                                                        ),
+                                                        onPressed: () => Navigator.pop(context, false),
+                                                        child: Text('Cancel'),
+                                                      ),
+                                                    ),
+                                                    SizedBox(width: 16),
+                                                    Expanded(
+                                                      child: ElevatedButton(
+                                                        style: ElevatedButton.styleFrom(
+                                                          backgroundColor: Colors.red.shade700,
+                                                          foregroundColor: Colors.white,
+                                                          padding: EdgeInsets.symmetric(vertical: screenWidth < 480 ? 12 : 16),
+                                                          shape: RoundedRectangleBorder(
+                                                            borderRadius: BorderRadius.circular(12),
+                                                          ),
+                                                          textStyle: TextStyle(fontSize: screenWidth < 480 ? 16 : 18, fontWeight: FontWeight.bold),
+                                                        ),
+                                                        onPressed: () => Navigator.pop(context, true),
+                                                        child: Text('Delete'),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    );
+                                    if (confirm == true) {
+                                      await _firestore.collection(videosCollection).doc(doc.id).delete();
+                                      await showDialog(
+                                        context: context,
+                                        builder: (context) {
+                                          final screenWidth = MediaQuery.of(context).size.width;
+                                          final dialogWidth = screenWidth < 480 ? screenWidth * 0.9 : 350.0;
+                                          return Dialog(
+                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                                            child: Container(
+                                              width: dialogWidth,
+                                              padding: EdgeInsets.symmetric(
+                                                horizontal: screenWidth < 480 ? 18 : 32,
+                                                vertical: screenWidth < 480 ? 24 : 32,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                gradient: oceanGradient,
+                                                borderRadius: BorderRadius.circular(24),
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: Colors.black.withOpacity(0.08),
+                                                    blurRadius: 16,
+                                                    offset: Offset(0, 6),
+                                                  ),
+                                                ],
+                                              ),
+                                              child: Column(
+                                                mainAxisSize: MainAxisSize.min,
+                                                crossAxisAlignment: CrossAxisAlignment.center,
+                                                children: [
+                                                  Icon(Icons.delete_forever, color: Colors.red, size: screenWidth < 480 ? 56 : 72),
+                                                  SizedBox(height: screenWidth < 480 ? 14 : 20),
+                                                  Text(
+                                                    'Success!',
+                                                    style: TextStyle(
+                                                      fontWeight: FontWeight.bold,
+                                                      fontSize: screenWidth < 480 ? 20 : 24,
+                                                      color: Colors.blue.shade900,
+                                                      letterSpacing: 0.5,
+                                                    ),
+                                                    textAlign: TextAlign.center,
+                                                  ),
+                                                  SizedBox(height: 10),
+                                                  Text(
+                                                    'Video deleted successfully!',
+                                                    style: TextStyle(
+                                                      fontSize: screenWidth < 480 ? 15 : 17,
+                                                      color: Colors.blue.shade900,
+                                                    ),
+                                                    textAlign: TextAlign.center,
+                                                  ),
+                                                  SizedBox(height: screenWidth < 480 ? 18 : 28),
+                                                  SizedBox(
+                                                    width: double.infinity,
+                                                    child: ElevatedButton(
+                                                      style: ElevatedButton.styleFrom(
+                                                        backgroundColor: Colors.blue.shade900,
+                                                        foregroundColor: Colors.white,
+                                                        padding: EdgeInsets.symmetric(vertical: screenWidth < 480 ? 12 : 16),
+                                                        shape: RoundedRectangleBorder(
+                                                          borderRadius: BorderRadius.circular(12),
+                                                        ),
+                                                        textStyle: TextStyle(fontSize: screenWidth < 480 ? 16 : 18, fontWeight: FontWeight.bold),
+                                                      ),
+                                                      onPressed: () => Navigator.pop(context),
+                                                      child: Text('Okay'),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                      );
+                                    }
+                                  },
+                                ),
+                              ],
+                            )
+                          else
+                            SizedBox(height: 36),
                         ],
-                      );
-                    },
+                      ),
+                    ),
                   ),
                 ),
               );
@@ -1481,7 +2160,6 @@ class _HomePageState extends State<HomePage> {
                                       decoration: BoxDecoration(
                                         color: Colors.blue.shade50,
                                         borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.blue.shade100),
                                       ),
                                       child: GestureDetector(
                                         onTap: () async {
@@ -2122,3 +2800,6 @@ class _DocumentWebViewState extends State<DocumentWebView> {
     );
   }
 }
+
+// Add a field to store the selected thumbnail timestamp
+int? _selectedVideoThumbnailMs;
